@@ -1,0 +1,105 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  lint:
+    name: CSharpier Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Install CSharpier
+        run: dotnet tool install -g csharpier --version 1.2.1
+
+      - name: Check formatting
+        run: csharpier check ./src
+
+  build:
+    name: Build & Test
+    runs-on: windows-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Install workloads
+        run: dotnet workload install wasm-tools
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      - name: Test
+        run: dotnet test -c Release --no-build --verbosity normal
+
+  installer:
+    name: Build Installer
+    runs-on: windows-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Install workloads
+        run: dotnet workload install wasm-tools
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Publish API
+        run: dotnet publish src/ForgeBoard.Api -c Release -o publish
+
+      - name: Publish WASM Frontend
+        run: dotnet publish src/ForgeBoard -f net10.0-browserwasm -c Release -o publish-wasm
+
+      - name: Bundle frontend into API
+        shell: pwsh
+        run: |
+          if (Test-Path "publish/wwwroot") { Remove-Item -Path "publish/wwwroot" -Recurse -Force }
+          Copy-Item -Path "publish-wasm/wwwroot" -Destination "publish/wwwroot" -Recurse
+          Remove-Item -Path "publish-wasm" -Recurse -Force
+
+      - name: Build installer
+        run: iscc /DMyAppVersion=${{ steps.version.outputs.VERSION }} installer\ForgeBoard.iss
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ForgeBoard-Setup-${{ steps.version.outputs.VERSION }}
+          path: artifacts/ForgeBoard-Setup-*.exe
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/ForgeBoard-Setup-*.exe
+          generate_release_notes: true

@@ -1,0 +1,70 @@
+<UserControl
+  x:Class="ForgeBoard.Controls.TagEditor"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+>
+  <StackPanel Spacing="8">
+    <ItemsRepeater x:Name="TagList">
+      <ItemsRepeater.Layout>
+        <UniformGridLayout
+          Orientation="Horizontal"
+          MinItemWidth="0"
+          MinItemHeight="0"
+          MinColumnSpacing="4"
+          MinRowSpacing="4"
+        />
+      </ItemsRepeater.Layout>
+      <ItemsRepeater.ItemTemplate>
+        <DataTemplate>
+          <Border
+            Background="{StaticResource SurfaceBrush}"
+            BorderBrush="{StaticResource DividerBrush}"
+            BorderThickness="1"
+            CornerRadius="12"
+            Padding="8,4"
+          >
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <TextBlock
+                Text="{Binding}"
+                FontSize="11"
+                Foreground="{StaticResource TextBrush}"
+                VerticalAlignment="Center"
+              />
+              <Button
+                Content="&#xE711;"
+                FontFamily="Segoe MDL2 Assets"
+                FontSize="8"
+                Padding="2"
+                Background="Transparent"
+                BorderThickness="0"
+                Click="RemoveTag_Click"
+                Tag="{Binding}"
+              />
+            </StackPanel>
+          </Border>
+        </DataTemplate>
+      </ItemsRepeater.ItemTemplate>
+    </ItemsRepeater>
+
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <TextBox
+        x:Name="NewTagBox"
+        Grid.Column="0"
+        PlaceholderText="Add tag..."
+        FontSize="13"
+        KeyDown="NewTagBox_KeyDown"
+      />
+      <Button
+        Grid.Column="1"
+        Content="&#xE710;"
+        FontFamily="Segoe MDL2 Assets"
+        Click="AddTag_Click"
+        Margin="4,0,0,0"
+      />
+    </Grid>
+  </StackPanel>
+</UserControl>

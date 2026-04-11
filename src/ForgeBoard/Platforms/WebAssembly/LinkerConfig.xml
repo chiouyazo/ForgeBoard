@@ -1,0 +1,28 @@
+<linker>
+  <assembly fullname="ForgeBoard" />
+  <assembly fullname="ForgeBoard.Contracts" />
+
+  <!-- Preserve System.Text.Json reflection for API deserialization -->
+  <assembly fullname="System.Text.Json">
+    <type fullname="*" />
+  </assembly>
+  <assembly fullname="System.Net.Http.Json">
+    <type fullname="*" />
+  </assembly>
+
+  <!-- Preserve LINQ expressions used by JSON serializer -->
+  <assembly fullname="System.Core">
+    <type fullname="System.Linq.Expressions*" />
+  </assembly>
+  <assembly fullname="System.Linq.Expressions">
+    <type fullname="*" />
+  </assembly>
+
+  <!-- Preserve model types for JSON deserialization -->
+  <assembly fullname="System.Collections">
+    <type fullname="*" />
+  </assembly>
+  <assembly fullname="System.ObjectModel">
+    <type fullname="*" />
+  </assembly>
+</linker>

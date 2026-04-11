@@ -1,0 +1,116 @@
+<ResourceDictionary
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+>
+  <Color x:Key="AccentColor">#2196F3</Color>
+  <Color x:Key="AccentDarkColor">#1976D2</Color>
+  <Color x:Key="SurfaceColor">#F5F5F5</Color>
+  <Color x:Key="BgColor">#FFFFFF</Color>
+  <Color x:Key="TextColor">#212121</Color>
+  <Color x:Key="MutedColor">#757575</Color>
+  <Color x:Key="HintColor">#999999</Color>
+  <Color x:Key="DividerColor">#E0E0E0</Color>
+  <Color x:Key="SuccessColor">#4CAF50</Color>
+  <Color x:Key="ErrorColor">#F44336</Color>
+  <Color x:Key="WarningColor">#FF9800</Color>
+  <Color x:Key="DangerColor">#D32F2F</Color>
+
+  <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
+  <SolidColorBrush x:Key="AccentDarkBrush" Color="{StaticResource AccentDarkColor}" />
+  <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}" />
+  <SolidColorBrush x:Key="BgBrush" Color="{StaticResource BgColor}" />
+  <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}" />
+  <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource MutedColor}" />
+  <SolidColorBrush x:Key="HintBrush" Color="{StaticResource HintColor}" />
+  <SolidColorBrush x:Key="DividerBrush" Color="{StaticResource DividerColor}" />
+  <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
+  <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
+  <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
+  <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" />
+
+  <!-- WinUI system theme resources that Uno Skia WASM may not provide -->
+  <Color x:Key="SystemChromeHighlightColor">#FF2196F3</Color>
+  <Color x:Key="SystemChromeLowColor">#FFF5F5F5</Color>
+  <Color x:Key="SystemChromeBlackLowColor">#33000000</Color>
+  <Color x:Key="SystemChromeBlackMediumLowColor">#66000000</Color>
+  <Color x:Key="SystemChromeBlackMediumColor">#80000000</Color>
+  <Color x:Key="SystemChromeBlackHighColor">#CC000000</Color>
+  <Color x:Key="SystemChromeWhiteColor">#FFFFFFFF</Color>
+  <Color x:Key="SystemListLowColor">#19000000</Color>
+  <Color x:Key="SystemListMediumColor">#33000000</Color>
+
+  <SolidColorBrush
+    x:Key="SystemControlBackgroundChromeBlackLowBrush"
+    Color="{StaticResource SystemChromeBlackLowColor}"
+  />
+  <SolidColorBrush
+    x:Key="SystemControlBackgroundChromeBlackMediumLowBrush"
+    Color="{StaticResource SystemChromeBlackMediumLowColor}"
+  />
+  <SolidColorBrush
+    x:Key="SystemControlBackgroundChromeBlackMediumBrush"
+    Color="{StaticResource SystemChromeBlackMediumColor}"
+  />
+  <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="{StaticResource AccentColor}" />
+  <SolidColorBrush x:Key="SystemControlHighlightBaseHighBrush" Color="{StaticResource TextColor}" />
+  <SolidColorBrush x:Key="SystemControlHighlightBaseMediumHighBrush" Color="#CC000000" />
+  <SolidColorBrush x:Key="SystemControlHighlightBaseMediumBrush" Color="#99000000" />
+  <SolidColorBrush x:Key="SystemControlHighlightBaseMediumLowBrush" Color="#66000000" />
+  <SolidColorBrush x:Key="SystemControlHighlightBaseLowBrush" Color="#33000000" />
+  <SolidColorBrush x:Key="SystemControlHighlightChromeHighBrush" Color="#FFCCCCCC" />
+  <SolidColorBrush x:Key="SystemControlHighlightListAccentHighBrush" Color="#B32196F3" />
+  <SolidColorBrush x:Key="SystemControlHighlightListAccentLowBrush" Color="#332196F3" />
+  <SolidColorBrush x:Key="SystemControlHighlightListAccentMediumBrush" Color="#662196F3" />
+  <SolidColorBrush
+    x:Key="SystemControlForegroundBaseHighBrush"
+    Color="{StaticResource TextColor}"
+  />
+  <SolidColorBrush x:Key="SystemControlForegroundBaseMediumHighBrush" Color="#CC000000" />
+  <SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush" Color="#99000000" />
+  <SolidColorBrush x:Key="SystemControlForegroundBaseMediumLowBrush" Color="#66000000" />
+  <SolidColorBrush x:Key="SystemControlForegroundBaseLowBrush" Color="#33000000" />
+  <SolidColorBrush x:Key="SystemControlForegroundChromeHighBrush" Color="#FFCCCCCC" />
+  <SolidColorBrush x:Key="SystemControlForegroundChromeWhiteBrush" Color="#FFFFFFFF" />
+  <SolidColorBrush
+    x:Key="SystemControlForegroundAccentBrush"
+    Color="{StaticResource AccentColor}"
+  />
+  <SolidColorBrush x:Key="SystemControlBackgroundBaseLowBrush" Color="#33000000" />
+  <SolidColorBrush x:Key="SystemControlBackgroundBaseMediumLowBrush" Color="#66000000" />
+  <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#FFFFFFFF" />
+  <SolidColorBrush
+    x:Key="SystemControlBackgroundListLowBrush"
+    Color="{StaticResource SystemListLowColor}"
+  />
+  <SolidColorBrush
+    x:Key="SystemControlBackgroundListMediumBrush"
+    Color="{StaticResource SystemListMediumColor}"
+  />
+  <SolidColorBrush x:Key="SystemControlDisabledBaseMediumLowBrush" Color="#66000000" />
+  <SolidColorBrush x:Key="SystemControlDisabledTransparentBrush" Color="Transparent" />
+  <SolidColorBrush
+    x:Key="SystemControlPageBackgroundChromeLowBrush"
+    Color="{StaticResource SystemChromeLowColor}"
+  />
+
+  <!-- TextBox specific resources for Uno WASM compatibility -->
+  <SolidColorBrush x:Key="TextControlForeground" Color="#212121" />
+  <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="#212121" />
+  <SolidColorBrush x:Key="TextControlForegroundFocused" Color="#212121" />
+  <SolidColorBrush x:Key="TextControlForegroundDisabled" Color="#99000000" />
+  <SolidColorBrush x:Key="TextControlBackground" Color="#FFFFFFFF" />
+  <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#FFF5F5F5" />
+  <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#FFFFFFFF" />
+  <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="#FFF0F0F0" />
+  <SolidColorBrush x:Key="TextControlBorderBrush" Color="#E0E0E0" />
+  <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#757575" />
+  <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#2196F3" />
+  <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="#E0E0E0" />
+  <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#999999" />
+  <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#999999" />
+  <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#999999" />
+  <SolidColorBrush x:Key="TextControlPlaceholderForegroundDisabled" Color="#CCCCCC" />
+  <SolidColorBrush x:Key="TextControlHeaderForeground" Color="#212121" />
+  <SolidColorBrush x:Key="TextControlHeaderForegroundDisabled" Color="#99000000" />
+  <SolidColorBrush x:Key="TextControlSelectionHighlightColor" Color="#662196F3" />
+</ResourceDictionary>

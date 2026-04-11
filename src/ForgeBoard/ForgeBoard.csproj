@@ -1,0 +1,76 @@
+<Project Sdk="Uno.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0-browserwasm;net10.0-desktop;net10.0</TargetFrameworks>
+
+    <OutputType>Exe</OutputType>
+    <UnoSingleProject>true</UnoSingleProject>
+
+    <!-- Display name -->
+    <ApplicationTitle>ForgeBoard</ApplicationTitle>
+    <!-- App Identifier -->
+    <ApplicationId>com.companyname.forgeboard</ApplicationId>
+    <!-- Versions -->
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+    <!-- Package Publisher -->
+    <ApplicationPublisher>ForgeBoard</ApplicationPublisher>
+    <!-- Package Description -->
+    <Description>ForgeBoard powered by Uno Platform.</Description>
+
+    <!--
+      UnoFeatures are used to quickly add and manage features enabled for your app.
+      https://aka.platform.uno/singleproject-features
+    -->
+    <UnoFeatures>
+      Mvvm;
+      SkiaRenderer;
+    </UnoFeatures>
+  </PropertyGroup>
+
+  <!-- WASM performance and compatibility settings -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-browserwasm'">
+    <!-- Compression -->
+    <WasmShellCompressedExtension>.br</WasmShellCompressedExtension>
+    <WasmShellEnableCompression>true</WasmShellEnableCompression>
+
+    <!-- Threading: disable to reduce complexity -->
+    <WasmEnableThreads>false</WasmEnableThreads>
+
+    <!-- Reduce payload size -->
+    <BlazorEnableTimeZoneSupport>false</BlazorEnableTimeZoneSupport>
+    <InvariantGlobalization>false</InvariantGlobalization>
+
+    <!-- IL Linker: trim unused code to reduce WASM module size -->
+    <WasmShellILLinkerEnabled>true</WasmShellILLinkerEnabled>
+
+    <!-- Enable AOT for Release builds (much faster runtime at cost of longer builds) -->
+    <RunAOTCompilation Condition="'$(Configuration)' == 'Release'">true</RunAOTCompilation>
+
+    <!-- XAML resource trimming -->
+    <UnoXamlResourcesTrimming>true</UnoXamlResourcesTrimming>
+  </PropertyGroup>
+
+  <!-- GC tuning for WASM -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browserwasm'">
+    <WasmShellMonoEnvironment
+      Include="MONO_GC_PARAMS"
+      Value="soft-heap-limit=512m,nursery-size=64m,evacuation-threshold=66,major=marksweep"
+    />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Sinks.File" />
+    <PackageReference Include="Serilog.Sinks.Console" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ForgeBoard.Contracts\ForgeBoard.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-desktop'">
+    <ProjectReference Include="..\ForgeBoard.Core\ForgeBoard.Core.csproj" />
+    <ProjectReference Include="..\ForgeBoard.Api\ForgeBoard.Api.csproj" />
+  </ItemGroup>
+</Project>

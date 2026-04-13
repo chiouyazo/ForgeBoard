@@ -5,6 +5,20 @@ namespace ForgeBoard.Core.Services.Build;
 
 public static class PowerShellRunner
 {
+    private static string _tempBasePath = Path.GetTempPath();
+
+    public static void ConfigureTempBasePath(string tempBasePath)
+    {
+        ArgumentNullException.ThrowIfNull(tempBasePath);
+        Directory.CreateDirectory(tempBasePath);
+        _tempBasePath = tempBasePath;
+    }
+
+    private static string AllocateTempScriptPath()
+    {
+        return Path.Combine(_tempBasePath, $"{Guid.NewGuid()}.ps1");
+    }
+
     public static async Task<(int ExitCode, string Output, string Error)> RunAsync(
         string script,
         CancellationToken ct
@@ -110,7 +124,7 @@ public static class PowerShellRunner
             + "    Set-Item WSMan:\\localhost\\Client\\TrustedHosts -Value $oldTrusted -Force -ErrorAction SilentlyContinue\n"
             + "}\n";
 
-        string tempFile = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.ps1");
+        string tempFile = AllocateTempScriptPath();
         try
         {
             await File.WriteAllTextAsync(tempFile, script, ct);
@@ -196,7 +210,7 @@ public static class PowerShellRunner
             + "    Set-Item WSMan:\\localhost\\Client\\TrustedHosts -Value $oldTrusted -Force -ErrorAction SilentlyContinue\n"
             + "}\n";
 
-        string tempFile = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.ps1");
+        string tempFile = AllocateTempScriptPath();
         try
         {
             await File.WriteAllTextAsync(tempFile, script, ct);

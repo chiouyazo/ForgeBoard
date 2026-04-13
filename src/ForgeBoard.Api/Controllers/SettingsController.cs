@@ -1,8 +1,14 @@
+using System.Diagnostics;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using ForgeBoard.Contracts;
 using ForgeBoard.Contracts.Interfaces;
 using ForgeBoard.Contracts.Models;
 using ForgeBoard.Core.Data;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Hosting.WindowsServices;
 using Microsoft.Net.Http.Headers;
 
 namespace ForgeBoard.Api.Controllers;
@@ -17,19 +23,31 @@ public sealed class SettingsController : ControllerBase
 {
     private readonly ForgeBoardDatabase _db;
     private readonly IPackerService _packerService;
+    private readonly IAppPaths _appPaths;
+    private readonly IWebHostEnvironment _hostEnvironment;
+    private readonly IHostApplicationLifetime _lifetime;
     private readonly ILogger<SettingsController> _logger;
 
     public SettingsController(
         ForgeBoardDatabase db,
         IPackerService packerService,
+        IAppPaths appPaths,
+        IWebHostEnvironment hostEnvironment,
+        IHostApplicationLifetime lifetime,
         ILogger<SettingsController> logger
     )
     {
         ArgumentNullException.ThrowIfNull(db);
         ArgumentNullException.ThrowIfNull(packerService);
+        ArgumentNullException.ThrowIfNull(appPaths);
+        ArgumentNullException.ThrowIfNull(hostEnvironment);
+        ArgumentNullException.ThrowIfNull(lifetime);
         ArgumentNullException.ThrowIfNull(logger);
         _db = db;
         _packerService = packerService;
+        _appPaths = appPaths;
+        _hostEnvironment = hostEnvironment;
+        _lifetime = lifetime;
         _logger = logger;
     }
 
@@ -141,6 +159,184 @@ public sealed class SettingsController : ControllerBase
             _logger.LogError(ex, "Failed to update application settings");
             return Problem("Failed to update application settings", statusCode: 500);
         }
+    }
+
+    /// <summary>
+    /// Retrieves the resolved storage paths the API is currently using.
+    /// </summary>
+    [HttpGet("storage")]
+    [ProducesResponseType(typeof(StoragePaths), StatusCodes.Status200OK)]
+    public ActionResult<StoragePaths> GetStorage()
+    {
+        return Ok(
+            new StoragePaths
+            {
+                DataDirectory = _appPaths.DataDirectory,
+                TempDirectory = _appPaths.TempDirectory,
+                CacheDirectory = _appPaths.CacheDirectory,
+                ArtifactsDirectory = _appPaths.ArtifactsDirectory,
+                WorkingDirectory = _appPaths.WorkingDirectory,
+                LogsDirectory = _appPaths.LogsDirectory,
+                DatabasePath = _appPaths.DatabasePath,
+            }
+        );
+    }
+
+    /// <summary>
+    /// Updates the configured storage paths in appsettings.json. Requires an API restart to take effect.
+    /// </summary>
+    [HttpPut("storage")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public ActionResult UpdateStorage([FromBody] StoragePathsUpdateRequest request)
+    {
+        if (request is null)
+        {
+            return BadRequest("Request body is required");
+        }
+
+        string dataDir = request.DataDirectory.Trim();
+        string tempDir = request.TempDirectory.Trim();
+
+        if (!string.IsNullOrEmpty(dataDir) && !Path.IsPathFullyQualified(dataDir))
+        {
+            return BadRequest("DataDirectory must be an absolute path");
+        }
+
+        if (!string.IsNullOrEmpty(tempDir) && !Path.IsPathFullyQualified(tempDir))
+        {
+            return BadRequest("TempDirectory must be an absolute path");
+        }
+
+        try
+        {
+            string settingsFile = Path.Combine(
+                _hostEnvironment.ContentRootPath,
+                "appsettings.json"
+            );
+            JsonNode root;
+
+            if (System.IO.File.Exists(settingsFile))
+            {
+                string existingJson = System.IO.File.ReadAllText(settingsFile);
+                root = JsonNode.Parse(existingJson) ?? new JsonObject();
+            }
+            else
+            {
+                root = new JsonObject();
+            }
+
+            JsonNode? section = root["ForgeBoard"];
+            if (section is not JsonObject forgeBoardSection)
+            {
+                forgeBoardSection = new JsonObject();
+                root["ForgeBoard"] = forgeBoardSection;
+            }
+
+            forgeBoardSection["DataDirectory"] = dataDir;
+            forgeBoardSection["TempDirectory"] = tempDir;
+
+            JsonSerializerOptions writeOptions = new JsonSerializerOptions { WriteIndented = true };
+            System.IO.File.WriteAllText(settingsFile, root.ToJsonString(writeOptions));
+
+            _logger.LogInformation(
+                "Updated storage paths in appsettings.json: DataDirectory={DataDir}, TempDirectory={TempDir}",
+                string.IsNullOrEmpty(dataDir) ? "(default)" : dataDir,
+                string.IsNullOrEmpty(tempDir) ? "(default)" : tempDir
+            );
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update storage paths");
+            return Problem("Failed to update storage paths: " + ex.Message, statusCode: 500);
+        }
+    }
+
+    /// <summary>
+    /// Restarts the API process. Spawns a detached relauncher and shuts down gracefully.
+    /// </summary>
+    [HttpPost("restart")]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public ActionResult Restart()
+    {
+        try
+        {
+            ScheduleRestart();
+            return Accepted();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to schedule API restart");
+            return Problem("Failed to schedule API restart: " + ex.Message, statusCode: 500);
+        }
+    }
+
+    private void ScheduleRestart()
+    {
+        if (WindowsServiceHelpers.IsWindowsService())
+        {
+            _logger.LogInformation("Restart requested - Windows service will be restarted by SCM");
+            string serviceName = "ForgeBoard";
+            string command =
+                $"/c timeout /t 2 /nobreak >nul && sc.exe stop \"{serviceName}\" >nul && sc.exe start \"{serviceName}\" >nul";
+            Process.Start(
+                new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = command,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                }
+            );
+            return;
+        }
+
+        Process current = Process.GetCurrentProcess();
+        string? exePath = current.MainModule?.FileName;
+        if (string.IsNullOrEmpty(exePath))
+        {
+            throw new InvalidOperationException("Cannot determine current process executable");
+        }
+
+        string workingDir = _hostEnvironment.ContentRootPath;
+        string relauncherCommand;
+
+        if (
+            Path.GetFileName(exePath).Equals("dotnet.exe", StringComparison.OrdinalIgnoreCase)
+            || Path.GetFileName(exePath).Equals("dotnet", StringComparison.OrdinalIgnoreCase)
+        )
+        {
+            string dllPath = Path.Combine(workingDir, "ForgeBoard.Api.dll");
+            relauncherCommand =
+                $"/c timeout /t 2 /nobreak >nul && start \"\" \"{exePath}\" \"{dllPath}\"";
+        }
+        else
+        {
+            relauncherCommand = $"/c timeout /t 2 /nobreak >nul && start \"\" \"{exePath}\"";
+        }
+
+        _logger.LogInformation("Restart requested - spawning relauncher and stopping");
+
+        Process.Start(
+            new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = relauncherCommand,
+                WorkingDirectory = workingDir,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            }
+        );
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(500));
+            _lifetime.StopApplication();
+        });
     }
 
     private void EnsureAutoLocalRunner(AppSettings settings)

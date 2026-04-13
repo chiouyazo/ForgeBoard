@@ -107,6 +107,10 @@ catch (InvalidOperationException ex)
     return;
 }
 
+ForgeBoard.Contracts.Interfaces.IAppPaths resolvedPaths =
+    app.Services.GetRequiredService<ForgeBoard.Contracts.Interfaces.IAppPaths>();
+ForgeBoard.Core.Services.Build.PowerShellRunner.ConfigureTempBasePath(resolvedPaths.TempDirectory);
+
 try
 {
     ForgeBoard.Core.Services.StepLibrarySeeder.SeedIfEmpty(

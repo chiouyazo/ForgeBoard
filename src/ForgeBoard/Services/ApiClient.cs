@@ -456,6 +456,22 @@ public sealed class ApiClient
         await PutAsync("api/settings", settings);
     }
 
+    public async Task<StoragePaths> GetStoragePathsAsync()
+    {
+        StoragePaths? result = await GetJsonNullableAsync<StoragePaths>("api/settings/storage");
+        return result ?? new StoragePaths();
+    }
+
+    public async Task UpdateStoragePathsAsync(StoragePathsUpdateRequest request)
+    {
+        await PutAsync("api/settings/storage", request);
+    }
+
+    public async Task RestartApiAsync()
+    {
+        await PostAsync("api/settings/restart");
+    }
+
     public async Task<string> GetPackerVersionAsync(string packerPath)
     {
         HttpResponseMessage response = await _http.GetAsync(

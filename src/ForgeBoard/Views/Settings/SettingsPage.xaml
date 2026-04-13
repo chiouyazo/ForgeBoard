@@ -140,6 +140,82 @@
         </Border>
 
         <Border Style="{StaticResource CardStyle}">
+          <StackPanel Spacing="12">
+            <TextBlock
+              Text="Storage"
+              FontSize="17"
+              FontWeight="SemiBold"
+              Foreground="{StaticResource TextBrush}"
+            />
+            <TextBlock
+              Text="Paths used for the database, cache, artifacts, workspaces, logs, and temp files. Changes require an API restart."
+              FontSize="12"
+              TextWrapping="Wrap"
+              Foreground="{StaticResource MutedBrush}"
+            />
+
+            <StackPanel Spacing="4">
+              <TextBlock
+                Text="Currently in use"
+                FontSize="13"
+                FontWeight="SemiBold"
+                Foreground="{StaticResource TextBrush}"
+              />
+              <TextBlock FontSize="12" Foreground="{StaticResource MutedBrush}">
+                <Run Text="Data: " FontWeight="SemiBold" />
+                <Run Text="{Binding CurrentDataDirectory}" />
+              </TextBlock>
+              <TextBlock FontSize="12" Foreground="{StaticResource MutedBrush}">
+                <Run Text="Temp: " FontWeight="SemiBold" />
+                <Run Text="{Binding CurrentTempDirectory}" />
+              </TextBlock>
+              <TextBlock FontSize="12" Foreground="{StaticResource MutedBrush}">
+                <Run Text="Database: " FontWeight="SemiBold" />
+                <Run Text="{Binding CurrentDatabasePath}" />
+              </TextBlock>
+            </StackPanel>
+
+            <TextBox
+              Header="Data directory (absolute path, leave empty for default)"
+              Text="{Binding NewDataDirectory, Mode=TwoWay}"
+              PlaceholderText="D:\ForgeBoard"
+            />
+            <TextBox
+              Header="Temp directory (absolute path, leave empty to use {DataDirectory}\temp)"
+              Text="{Binding NewTempDirectory, Mode=TwoWay}"
+              PlaceholderText="D:\ForgeBoard\temp"
+            />
+
+            <Button
+              Content="Save Storage Paths"
+              Style="{StaticResource PrimaryButtonStyle}"
+              Command="{Binding SaveStorageCommand}"
+            />
+
+            <Border
+              Background="#33FFA500"
+              CornerRadius="4"
+              Padding="12,8"
+              Visibility="{Binding StorageRestartRequired, Converter={StaticResource BoolToVisibilityConverter}}"
+            >
+              <StackPanel Spacing="8">
+                <TextBlock
+                  Text="Restart the API for the new paths to take effect."
+                  FontSize="12"
+                  Foreground="{StaticResource TextBrush}"
+                  TextWrapping="Wrap"
+                />
+                <Button
+                  Content="Restart API now"
+                  HorizontalAlignment="Left"
+                  Command="{Binding RestartApiCommand}"
+                />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource CardStyle}">
           <StackPanel Spacing="8">
             <TextBlock
               Text="About"
@@ -148,7 +224,7 @@
               Foreground="{StaticResource TextBrush}"
             />
             <TextBlock
-              Text="ForgeBoard v1.0"
+              Text="{Binding ForgeBoardVersion}"
               FontSize="13"
               Foreground="{StaticResource MutedBrush}"
             />

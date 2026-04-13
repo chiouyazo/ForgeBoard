@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
 using ForgeBoard.Contracts.Models;
 using ForgeBoard.Services;
@@ -52,6 +53,24 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _packerVersionValid;
 
+    [ObservableProperty]
+    private string _currentDataDirectory = string.Empty;
+
+    [ObservableProperty]
+    private string _currentTempDirectory = string.Empty;
+
+    [ObservableProperty]
+    private string _currentDatabasePath = string.Empty;
+
+    [ObservableProperty]
+    private string _newDataDirectory = string.Empty;
+
+    [ObservableProperty]
+    private string _newTempDirectory = string.Empty;
+
+    [ObservableProperty]
+    private bool _storageRestartRequired;
+
     public Brush PackerVersionBrush
     {
         get
@@ -95,6 +114,26 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    public string ForgeBoardVersion
+    {
+        get
+        {
+            Assembly assembly = typeof(SettingsViewModel).Assembly;
+            AssemblyInformationalVersionAttribute? info =
+                assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+            string version =
+                info?.InformationalVersion ?? assembly.GetName().Version?.ToString() ?? "0.0.0";
+
+            int plusIndex = version.IndexOf('+');
+            if (plusIndex > 0)
+            {
+                version = version[..plusIndex];
+            }
+
+            return $"ForgeBoard v{version}";
+        }
+    }
+
     public SettingsViewModel(ApiClient api)
     {
         _api = api;
@@ -114,6 +153,8 @@ public partial class SettingsViewModel : ObservableObject
             ProxyUrl = Settings.ProxyUrl ?? string.Empty;
             PackerPath = Settings.PackerPath ?? string.Empty;
             DefaultBuilder = Settings.DefaultBuilder;
+
+            await LoadStorageAsync();
         }
         catch (Exception ex)
         {
@@ -123,6 +164,62 @@ public partial class SettingsViewModel : ObservableObject
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private async Task LoadStorageAsync()
+    {
+        StoragePaths paths = await _api.GetStoragePathsAsync();
+        CurrentDataDirectory = paths.DataDirectory;
+        CurrentTempDirectory = paths.TempDirectory;
+        CurrentDatabasePath = paths.DatabasePath;
+        NewDataDirectory = paths.DataDirectory;
+        NewTempDirectory = paths.TempDirectory;
+        StorageRestartRequired = false;
+    }
+
+    [RelayCommand]
+    private async Task SaveStorageAsync()
+    {
+        ErrorMessage = null;
+        try
+        {
+            StoragePathsUpdateRequest request = new StoragePathsUpdateRequest
+            {
+                DataDirectory = NewDataDirectory?.Trim() ?? string.Empty,
+                TempDirectory = NewTempDirectory?.Trim() ?? string.Empty,
+            };
+
+            await _api.UpdateStoragePathsAsync(request);
+
+            StorageRestartRequired = true;
+            Views.Shell.Current?.ShowNotification(
+                "Storage paths saved. Restart the API to apply changes."
+            );
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+            Views.Shell.Current?.ShowError(ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    private async Task RestartApiAsync()
+    {
+        ErrorMessage = null;
+        try
+        {
+            await _api.RestartApiAsync();
+            Views.Shell.Current?.ShowNotification(
+                "Restart triggered. The API will be unavailable for a few seconds."
+            );
+            StorageRestartRequired = false;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+            Views.Shell.Current?.ShowError(ex.Message);
         }
     }
 

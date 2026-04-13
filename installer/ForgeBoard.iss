@@ -35,37 +35,26 @@ Name: "{group}\ForgeBoard Configuration"; Filename: "{app}\appsettings.json"
 Name: "{group}\Uninstall ForgeBoard"; Filename: "{uninstallexe}"
 
 [Run]
-; Register and start the Windows service
 Filename: "sc.exe"; Parameters: "create ForgeBoard binPath=""{app}\{#MyAppExeName}"" start=auto DisplayName=""ForgeBoard Build Server"""; Flags: runhidden waituntilterminated
 Filename: "sc.exe"; Parameters: "description ForgeBoard ""Manages HashiCorp Packer VM image builds, feeds, and artifacts."""; Flags: runhidden waituntilterminated
 Filename: "sc.exe"; Parameters: "start ForgeBoard"; Flags: runhidden waituntilterminated
-; Open the web UI
 Filename: "http://localhost:{code:GetPort}"; Description: "Open ForgeBoard in browser"; Flags: postinstall shellexec nowait skipifsilent unchecked
 
 [UninstallRun]
-; Stop and remove the Windows service
 Filename: "sc.exe"; Parameters: "stop ForgeBoard"; Flags: runhidden waituntilterminated
 Filename: "sc.exe"; Parameters: "delete ForgeBoard"; Flags: runhidden waituntilterminated
 
 [Code]
 var
   PortPage: TInputQueryWizardPage;
-  DataDirPage: TInputDirWizardPage;
 
 procedure InitializeWizard;
 begin
   PortPage := CreateInputQueryPage(wpSelectDir,
     'Server Configuration', 'Configure the ForgeBoard server port.',
-    'Specify the port number for the ForgeBoard web server. Default is 5050.');
+    'Specify the port number for the ForgeBoard web server. Default is 5050. Storage paths can be changed later in the ForgeBoard settings UI.');
   PortPage.Add('Port:', False);
   PortPage.Values[0] := '5050';
-
-  DataDirPage := CreateInputDirPage(PortPage.ID,
-    'Data Directory', 'Configure where ForgeBoard stores its data.',
-    'Select the directory where ForgeBoard will store the database, artifacts, and build workspaces. Leave empty to use the default location (%LOCALAPPDATA%\ForgeBoard).',
-    False, '');
-  DataDirPage.Add('Data Directory:');
-  DataDirPage.Values[0] := '';
 end;
 
 function GetPort(Param: String): String;
@@ -75,25 +64,17 @@ begin
     Result := '5050';
 end;
 
-function GetDataDir(Param: String): String;
-begin
-  Result := DataDirPage.Values[0];
-end;
-
 procedure WriteAppSettings;
 var
   Port: String;
-  DataDir: String;
   Json: String;
 begin
   Port := GetPort('');
-  DataDir := GetDataDir('');
 
   Json := '{' + #13#10;
   Json := Json + '  "ForgeBoard": {' + #13#10;
   Json := Json + '    "Port": ' + Port + ',' + #13#10;
-  StringChangeEx(DataDir, '\', '\\', True);
-  Json := Json + '    "DataDirectory": "' + DataDir + '",' + #13#10;
+  Json := Json + '    "DataDirectory": "",' + #13#10;
   Json := Json + '    "TempDirectory": ""' + #13#10;
   Json := Json + '  }' + #13#10;
   Json := Json + '}';
@@ -107,7 +88,6 @@ begin
     WriteAppSettings;
 end;
 
-// Stop the service before upgrading
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   ResultCode: Integer;

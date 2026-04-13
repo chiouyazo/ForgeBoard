@@ -72,6 +72,8 @@ public sealed class BuildExecutionWorker
         }
 
         string? workDir = null;
+        string? outputDir = null;
+        bool buildSucceeded = false;
 
         try
         {
@@ -105,7 +107,7 @@ public sealed class BuildExecutionWorker
                 cancellationToken
             );
 
-            string outputDir = Path.Combine(_appPaths.ArtifactsDirectory, executionId);
+            outputDir = Path.Combine(_appPaths.ArtifactsDirectory, executionId);
 
             BaseImage baseImage = ResolveBaseImageForTemplate(definition.BaseImageId);
 
@@ -227,6 +229,8 @@ public sealed class BuildExecutionWorker
                 }
 
                 CleanupRawExportFiles(outputDir, addLog, executionId);
+                CleanupIntermediateArtifactFiles(executionId, artifactId, outputDir, addLog);
+                buildSucceeded = true;
             }
             else
             {
@@ -238,8 +242,6 @@ public sealed class BuildExecutionWorker
                     Contracts.Models.LogLevel.Error,
                     "Build failed during phase execution"
                 );
-
-                CleanupOutputDirectory(outputDir);
             }
 
             execution.CompletedAt = DateTimeOffset.UtcNow;
@@ -279,6 +281,11 @@ public sealed class BuildExecutionWorker
             if (workDir is not null)
             {
                 _workspaceManager.CleanupWorkspace(workDir);
+            }
+
+            if (!buildSucceeded && outputDir is not null)
+            {
+                CleanupOutputDirectory(outputDir);
             }
         }
     }
@@ -754,11 +761,71 @@ public sealed class BuildExecutionWorker
             if (Directory.Exists(outputDir))
             {
                 Directory.Delete(outputDir, true);
+                _logger.LogInformation("Cleaned up build output at {Path}", outputDir);
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to clean up failed build output at {Path}", outputDir);
+        }
+    }
+
+    private void CleanupIntermediateArtifactFiles(
+        string executionId,
+        string? artifactId,
+        string outputDir,
+        Action<string, Contracts.Models.LogLevel, string> addLog
+    )
+    {
+        if (artifactId is null || !Directory.Exists(outputDir))
+        {
+            return;
+        }
+
+        ImageArtifact? artifact = _db.ImageArtifacts.FindById(artifactId);
+        if (artifact is null)
+        {
+            return;
+        }
+
+        string keepPath = Path.GetFullPath(artifact.FilePath);
+        string keepChecksum = keepPath + ".sha256";
+        long freedBytes = 0;
+
+        foreach (string file in Directory.GetFiles(outputDir, "*", SearchOption.AllDirectories))
+        {
+            string fullPath = Path.GetFullPath(file);
+            if (
+                fullPath.Equals(keepPath, StringComparison.OrdinalIgnoreCase)
+                || fullPath.Equals(keepChecksum, StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                continue;
+            }
+
+            try
+            {
+                long size = new FileInfo(file).Length;
+                File.Delete(file);
+                freedBytes += size;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete intermediate file {Path}", file);
+            }
+        }
+
+        if (freedBytes > 0)
+        {
+            string freedDisplay =
+                freedBytes > 1024 * 1024 * 1024
+                    ? $"{freedBytes / (1024.0 * 1024.0 * 1024.0):F1} GB"
+                    : $"{freedBytes / (1024.0 * 1024.0):F0} MB";
+            addLog(
+                executionId,
+                Contracts.Models.LogLevel.Info,
+                $"Cleaned up intermediate files, freed {freedDisplay}"
+            );
         }
     }
 }

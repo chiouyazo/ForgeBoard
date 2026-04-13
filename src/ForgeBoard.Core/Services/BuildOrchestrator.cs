@@ -304,6 +304,7 @@ public sealed class BuildOrchestrator : IBuildOrchestrator, IDisposable
         }
 
         CleanOrphanedWorkspaces();
+        CleanOrphanedArtifactDirectories();
     }
 
     private void OnApplicationStopping()
@@ -364,6 +365,58 @@ public sealed class BuildOrchestrator : IBuildOrchestrator, IDisposable
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to clean orphaned workspace directories");
+        }
+    }
+
+    private void CleanOrphanedArtifactDirectories()
+    {
+        if (!Directory.Exists(_appPaths.ArtifactsDirectory))
+        {
+            return;
+        }
+
+        HashSet<string> referencedExecutions = new HashSet<string>(
+            _db.ImageArtifacts.FindAll().Select(a => a.BuildExecutionId),
+            StringComparer.OrdinalIgnoreCase
+        );
+
+        long freedBytes = 0;
+        int removedCount = 0;
+
+        foreach (string dir in Directory.GetDirectories(_appPaths.ArtifactsDirectory))
+        {
+            string dirName = Path.GetFileName(dir);
+            if (referencedExecutions.Contains(dirName))
+            {
+                continue;
+            }
+
+            try
+            {
+                long dirSize = Directory
+                    .GetFiles(dir, "*", SearchOption.AllDirectories)
+                    .Sum(f => new FileInfo(f).Length);
+                Directory.Delete(dir, true);
+                freedBytes += dirSize;
+                removedCount++;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to clean orphaned artifact directory {Path}", dir);
+            }
+        }
+
+        if (removedCount > 0)
+        {
+            string freedDisplay =
+                freedBytes > 1024 * 1024 * 1024
+                    ? $"{freedBytes / (1024.0 * 1024.0 * 1024.0):F1} GB"
+                    : $"{freedBytes / (1024.0 * 1024.0):F0} MB";
+            _logger.LogInformation(
+                "Cleaned {Count} orphaned artifact directories, freed {Size}",
+                removedCount,
+                freedDisplay
+            );
         }
     }
 

@@ -521,19 +521,13 @@ public sealed class DirectBuildEngine
                 ? lines[1].Trim()
                 : $@"C:\{Path.GetFileName(source)}";
 
-        string copySource = source;
-        if (Directory.Exists(source))
-        {
-            copySource = source.TrimEnd('\\', '/') + @"\*";
-        }
-
         logLine($"{source} -> {destination}");
 
         (int exitCode, string _, string error) = await PowerShellRunner.CopyToSessionAsync(
             host,
             SessionUser,
             SessionPassword,
-            copySource,
+            source,
             destination,
             cancellationToken
         );

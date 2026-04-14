@@ -1,5 +1,7 @@
 #define MyAppName "ForgeBoard"
-#define MyAppVersion "1.0.0"
+#ifndef MyAppVersion
+  #define MyAppVersion "1.0.0"
+#endif
 #define MyAppPublisher "ForgeBoard"
 #define MyAppURL "https://github.com/your-org/ForgeBoard"
 #define MyAppExeName "ForgeBoard.Api.exe"

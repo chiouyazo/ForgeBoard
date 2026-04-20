@@ -22,15 +22,7 @@ public partial class App : Application
             );
             if (!string.IsNullOrEmpty(origin))
             {
-                Uri originUri = new Uri(origin);
-                if (originUri.Port == 5050)
-                {
-                    url = origin;
-                }
-                else
-                {
-                    url = $"{originUri.Scheme}://{originUri.Host}:5050";
-                }
+                url = origin;
             }
         }
         catch { }

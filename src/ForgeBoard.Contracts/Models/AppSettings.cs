@@ -18,5 +18,9 @@ public sealed class AppSettings
 
     public string? PackerPath { get; set; }
 
+    public string WinrmUsername { get; set; } = "Administrator";
+
+    public string WinrmPassword { get; set; } = "Admin123!";
+
     public DateTimeOffset ModifiedAt { get; set; } = DateTimeOffset.UtcNow;
 }

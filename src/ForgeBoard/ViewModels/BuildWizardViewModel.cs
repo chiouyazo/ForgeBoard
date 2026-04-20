@@ -47,6 +47,7 @@ public partial class BuildWizardViewModel : ObservableObject
     private int _currentStep;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsIsoBaseImage))]
     private BaseImageDisplayItem? _selectedBaseImage;
 
     [ObservableProperty]
@@ -106,6 +107,21 @@ public partial class BuildWizardViewModel : ObservableObject
 
     [ObservableProperty]
     private string? _editingDefinitionId;
+
+    [ObservableProperty]
+    private string _unattendPath = string.Empty;
+
+    public bool IsIsoBaseImage
+    {
+        get
+        {
+            if (SelectedBaseImage is null)
+            {
+                return false;
+            }
+            return SelectedBaseImage.Format.Equals("ISO", StringComparison.OrdinalIgnoreCase);
+        }
+    }
 
     public bool IsFirstStep => CurrentStep == 0;
     public bool IsLastStep => CurrentStep == 3;
@@ -619,6 +635,7 @@ public partial class BuildWizardViewModel : ObservableObject
             DiskSizeGb = definition.DiskSizeMb / 1024;
             Tags = string.Join(", ", definition.Tags);
             PostProcessors = string.Join(", ", definition.PostProcessors);
+            UnattendPath = definition.UnattendPath ?? string.Empty;
 
             BaseImageDisplayItem? matchingImage = null;
             foreach (BaseImageDisplayItem image in _allBaseImages)
@@ -676,6 +693,7 @@ public partial class BuildWizardViewModel : ObservableObject
             MemoryMb = MemoryMb,
             CpuCount = CpuCount,
             DiskSizeMb = DiskSizeGb * 1024,
+            UnattendPath = string.IsNullOrWhiteSpace(UnattendPath) ? null : UnattendPath,
             Steps = BuildSteps.ToList(),
             Tags = tagList,
             PostProcessors = postProcessorList,

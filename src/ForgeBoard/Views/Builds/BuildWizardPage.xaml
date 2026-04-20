@@ -125,6 +125,29 @@
               </DataTemplate>
             </GridView.ItemTemplate>
           </GridView>
+
+          <StackPanel
+            Spacing="8"
+            Visibility="{Binding IsIsoBaseImage, Converter={StaticResource BoolToVisibilityConverter}}"
+          >
+            <TextBlock
+              Text="Autounattend.xml (optional)"
+              FontSize="13"
+              FontWeight="SemiBold"
+              Foreground="{StaticResource TextBrush}"
+            />
+            <TextBlock
+              Text="Path to an Autounattend.xml file on the build host. Packer attaches it as a floppy disk so Windows Setup runs unattended."
+              FontSize="12"
+              TextWrapping="Wrap"
+              Foreground="{StaticResource MutedBrush}"
+            />
+            <TextBox
+              Text="{Binding UnattendPath, Mode=TwoWay}"
+              PlaceholderText="C:\path\to\Autounattend.xml"
+              FontSize="12"
+            />
+          </StackPanel>
         </StackPanel>
 
         <!-- Step 1: Build Steps -->

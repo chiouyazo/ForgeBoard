@@ -1,11 +1,29 @@
 using System.Text;
+using ForgeBoard.Contracts;
 using ForgeBoard.Contracts.Interfaces;
 using ForgeBoard.Contracts.Models;
+using ForgeBoard.Core.Data;
 
 namespace ForgeBoard.Core.Services;
 
 public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
 {
+    private readonly ForgeBoardDatabase _db;
+
+    public PackerTemplateGenerator(ForgeBoardDatabase db)
+    {
+        ArgumentNullException.ThrowIfNull(db);
+        _db = db;
+    }
+
+    private (string Username, string Password) GetWinrmCredentials()
+    {
+        AppSettings? settings = _db.AppSettings.FindById(KnownIds.DefaultSettings);
+        string username = settings?.WinrmUsername ?? "Administrator";
+        string password = settings?.WinrmPassword ?? "Admin123!";
+        return (username, password);
+    }
+
     public string GenerateHcl(
         BuildDefinition definition,
         BaseImage baseImage,
@@ -133,7 +151,7 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
             && string.IsNullOrEmpty(Path.GetExtension(path));
     }
 
-    private static void AppendSourceBlock(
+    private void AppendSourceBlock(
         StringBuilder hcl,
         BuildDefinition definition,
         BaseImage baseImage,
@@ -172,7 +190,7 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
         return $"{safeName}-{shortId}";
     }
 
-    private static void AppendQemuSource(
+    private void AppendQemuSource(
         StringBuilder hcl,
         BuildDefinition definition,
         string imagePath,
@@ -211,8 +229,9 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
         hcl.AppendLine($"  cpus              = {definition.CpuCount}");
         hcl.AppendLine("  accelerator       = \"tcg\"");
         hcl.AppendLine("  communicator      = \"winrm\"");
-        hcl.AppendLine("  winrm_username    = \"Administrator\"");
-        hcl.AppendLine("  winrm_password    = \"Admin123!\"");
+        (string winrmUser, string winrmPass) = GetWinrmCredentials();
+        hcl.AppendLine($"  winrm_username    = \"{EscapeHcl(winrmUser)}\"");
+        hcl.AppendLine($"  winrm_password    = \"{EscapeHcl(winrmPass)}\"");
         hcl.AppendLine("  winrm_timeout     = \"30m\"");
 
         if (definition.UnattendPath is not null)
@@ -223,7 +242,7 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
         hcl.AppendLine("}");
     }
 
-    private static void AppendHyperVIsoSource(
+    private void AppendHyperVIsoSource(
         StringBuilder hcl,
         BuildDefinition definition,
         string isoPath,
@@ -244,8 +263,9 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
         hcl.AppendLine("  headless          = true");
         hcl.AppendLine("  switch_name       = \"Default Switch\"");
         hcl.AppendLine("  communicator      = \"winrm\"");
-        hcl.AppendLine("  winrm_username    = \"Administrator\"");
-        hcl.AppendLine("  winrm_password    = \"Admin123!\"");
+        (string winrmUser, string winrmPass) = GetWinrmCredentials();
+        hcl.AppendLine($"  winrm_username    = \"{EscapeHcl(winrmUser)}\"");
+        hcl.AppendLine($"  winrm_password    = \"{EscapeHcl(winrmPass)}\"");
         hcl.AppendLine("  winrm_timeout     = \"30m\"");
 
         if (definition.UnattendPath is not null)
@@ -256,7 +276,7 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
         hcl.AppendLine("}");
     }
 
-    private static void AppendHyperVVmcxSource(
+    private void AppendHyperVVmcxSource(
         StringBuilder hcl,
         BuildDefinition definition,
         string imagePath,
@@ -287,8 +307,9 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
         hcl.AppendLine("  headless          = true");
         hcl.AppendLine("  switch_name       = \"Default Switch\"");
         hcl.AppendLine("  communicator      = \"winrm\"");
-        hcl.AppendLine("  winrm_username    = \"Administrator\"");
-        hcl.AppendLine("  winrm_password    = \"Admin123!\"");
+        (string winrmUser, string winrmPass) = GetWinrmCredentials();
+        hcl.AppendLine($"  winrm_username    = \"{EscapeHcl(winrmUser)}\"");
+        hcl.AppendLine($"  winrm_password    = \"{EscapeHcl(winrmPass)}\"");
         hcl.AppendLine("  winrm_timeout     = \"30m\"");
         hcl.AppendLine("}");
     }

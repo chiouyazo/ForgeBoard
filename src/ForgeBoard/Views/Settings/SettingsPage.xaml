@@ -111,6 +111,33 @@
         <Border Style="{StaticResource CardStyle}">
           <StackPanel Spacing="12">
             <TextBlock
+              Text="VM Credentials"
+              FontSize="17"
+              FontWeight="SemiBold"
+              Foreground="{StaticResource TextBrush}"
+            />
+            <TextBlock
+              Text="Username and password for WinRM connections to build VMs. Must match the credentials set in your Autounattend.xml."
+              FontSize="12"
+              TextWrapping="Wrap"
+              Foreground="{StaticResource MutedBrush}"
+            />
+            <TextBox
+              Header="Username"
+              Text="{Binding WinrmUsername, Mode=TwoWay}"
+              PlaceholderText="Administrator"
+            />
+            <PasswordBox
+              Header="Password"
+              Password="{Binding WinrmPassword, Mode=TwoWay}"
+              PlaceholderText="Admin123!"
+            />
+          </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource CardStyle}">
+          <StackPanel Spacing="12">
+            <TextBlock
               Text="General"
               FontSize="17"
               FontWeight="SemiBold"

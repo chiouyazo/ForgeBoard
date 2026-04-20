@@ -54,6 +54,12 @@ public partial class SettingsViewModel : ObservableObject
     private bool _packerVersionValid;
 
     [ObservableProperty]
+    private string _winrmUsername = "Administrator";
+
+    [ObservableProperty]
+    private string _winrmPassword = "Admin123!";
+
+    [ObservableProperty]
     private string _currentDataDirectory = string.Empty;
 
     [ObservableProperty]
@@ -153,6 +159,8 @@ public partial class SettingsViewModel : ObservableObject
             ProxyUrl = Settings.ProxyUrl ?? string.Empty;
             PackerPath = Settings.PackerPath ?? string.Empty;
             DefaultBuilder = Settings.DefaultBuilder;
+            WinrmUsername = Settings.WinrmUsername ?? "Administrator";
+            WinrmPassword = Settings.WinrmPassword ?? "Admin123!";
 
             await LoadStorageAsync();
         }
@@ -241,6 +249,12 @@ public partial class SettingsViewModel : ObservableObject
             Settings.ProxyUrl = string.IsNullOrWhiteSpace(ProxyUrl) ? null : ProxyUrl;
             Settings.PackerPath = string.IsNullOrWhiteSpace(PackerPath) ? null : PackerPath;
             Settings.DefaultBuilder = DefaultBuilder;
+            Settings.WinrmUsername = string.IsNullOrWhiteSpace(WinrmUsername)
+                ? "Administrator"
+                : WinrmUsername;
+            Settings.WinrmPassword = string.IsNullOrWhiteSpace(WinrmPassword)
+                ? "Admin123!"
+                : WinrmPassword;
             Settings.ModifiedAt = DateTimeOffset.UtcNow;
 
             await _api.SaveSettingsAsync(Settings);

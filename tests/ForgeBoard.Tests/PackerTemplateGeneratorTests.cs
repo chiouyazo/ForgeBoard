@@ -1,4 +1,5 @@
 using ForgeBoard.Contracts.Models;
+using ForgeBoard.Core.Data;
 using ForgeBoard.Core.Services;
 
 namespace ForgeBoard.Tests;
@@ -6,12 +7,32 @@ namespace ForgeBoard.Tests;
 [TestFixture]
 public class PackerTemplateGeneratorTests
 {
+    private string _tempDir = null!;
+    private TestAppPaths _paths = null!;
+    private ForgeBoardDatabase _db = null!;
     private PackerTemplateGenerator _generator = null!;
 
     [SetUp]
     public void Setup()
     {
-        _generator = new PackerTemplateGenerator();
+        _tempDir = Path.Combine(
+            Path.GetTempPath(),
+            "forgeboard_test_" + Guid.NewGuid().ToString("N")
+        );
+        _paths = new TestAppPaths(_tempDir);
+        _paths.EnsureDirectoriesExist();
+        _db = new ForgeBoardDatabase(_paths);
+        _generator = new PackerTemplateGenerator(_db);
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        _db.Dispose();
+        if (Directory.Exists(_tempDir))
+        {
+            Directory.Delete(_tempDir, true);
+        }
     }
 
     [Test]

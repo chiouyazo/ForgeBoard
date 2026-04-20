@@ -1,4 +1,6 @@
+using ForgeBoard.Contracts;
 using ForgeBoard.Contracts.Models;
+using ForgeBoard.Core.Data;
 using Microsoft.Extensions.Logging;
 using ContractLogLevel = ForgeBoard.Contracts.Models.LogLevel;
 
@@ -6,19 +8,38 @@ namespace ForgeBoard.Core.Services.Build;
 
 public sealed class DirectBuildEngine
 {
+    private readonly ForgeBoardDatabase _db;
     private readonly ILogger<DirectBuildEngine> _logger;
 
-    private const string SessionUser = "Administrator";
-    private const string SessionPassword = "Admin123!";
     private const string TempScriptPath = @"C:\Windows\Temp\forgeboard-script.ps1";
     private static readonly TimeSpan SessionPollInterval = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan SessionTimeout = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromMinutes(5);
 
-    public DirectBuildEngine(ILogger<DirectBuildEngine> logger)
+    public DirectBuildEngine(ForgeBoardDatabase db, ILogger<DirectBuildEngine> logger)
     {
+        ArgumentNullException.ThrowIfNull(db);
         ArgumentNullException.ThrowIfNull(logger);
+        _db = db;
         _logger = logger;
+    }
+
+    private string SessionUser
+    {
+        get
+        {
+            AppSettings? settings = _db.AppSettings.FindById(KnownIds.DefaultSettings);
+            return settings?.WinrmUsername ?? "Administrator";
+        }
+    }
+
+    private string SessionPassword
+    {
+        get
+        {
+            AppSettings? settings = _db.AppSettings.FindById(KnownIds.DefaultSettings);
+            return settings?.WinrmPassword ?? "Admin123!";
+        }
     }
 
     public async Task<BuildEngineResult> ExecuteAsync(
@@ -423,7 +444,7 @@ public sealed class DirectBuildEngine
         return false;
     }
 
-    private static async Task<BuildEngineResult?> ExecutePowerShellAsync(
+    private async Task<BuildEngineResult?> ExecutePowerShellAsync(
         string host,
         BuildStep step,
         Action<string> logLine,
@@ -455,7 +476,7 @@ public sealed class DirectBuildEngine
         return null;
     }
 
-    private static async Task<BuildEngineResult?> ExecutePowerShellFileAsync(
+    private async Task<BuildEngineResult?> ExecutePowerShellFileAsync(
         string host,
         BuildStep step,
         Action<string> logLine,
@@ -507,7 +528,7 @@ public sealed class DirectBuildEngine
         return null;
     }
 
-    private static async Task<BuildEngineResult?> ExecuteFileUploadAsync(
+    private async Task<BuildEngineResult?> ExecuteFileUploadAsync(
         string host,
         BuildStep step,
         Action<string> logLine,
@@ -601,7 +622,7 @@ public sealed class DirectBuildEngine
         return null;
     }
 
-    private static async Task<BuildEngineResult?> ExecuteShellAsync(
+    private async Task<BuildEngineResult?> ExecuteShellAsync(
         string host,
         BuildStep step,
         Action<string> logLine,
@@ -631,7 +652,7 @@ public sealed class DirectBuildEngine
         return null;
     }
 
-    private static async Task<BuildEngineResult?> ExecuteShellFileAsync(
+    private async Task<BuildEngineResult?> ExecuteShellFileAsync(
         string host,
         BuildStep step,
         Action<string> logLine,

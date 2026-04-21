@@ -132,29 +132,30 @@ public sealed class PackerBuildEngine
             if (
                 !string.IsNullOrEmpty(definition.UnattendPath)
                 && definition.Builder == PackerBuilder.HyperV
+                && IsIsoBaseImage(baseImage)
             )
             {
-                string adkPath = Path.Combine(
+                string oscdimgExe = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
                     @"Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\Oscdimg\oscdimg.exe"
                 );
 
-                if (!File.Exists(adkPath))
+                if (!File.Exists(oscdimgExe))
                 {
                     addLog(
                         executionId,
                         Contracts.Models.LogLevel.Error,
-                        "oscdimg.exe not found. Packer needs it to create the Autounattend CD for Gen 2 VMs."
+                        "oscdimg.exe not found. Required to prepare the Windows ISO with Autounattend."
                     );
                     addLog(
                         executionId,
                         Contracts.Models.LogLevel.Error,
-                        "Install the Windows ADK Deployment Tools on this server:"
+                        "Install Windows ADK Deployment Tools:"
                     );
                     addLog(
                         executionId,
                         Contracts.Models.LogLevel.Error,
-                        "  1. Download the ADK from https://learn.microsoft.com/en-us/windows-hardware/get-started/adk-install"
+                        "  1. Download from https://learn.microsoft.com/en-us/windows-hardware/get-started/adk-install"
                     );
                     addLog(
                         executionId,
@@ -167,9 +168,47 @@ public sealed class PackerBuildEngine
                         "  3. Restart ForgeBoard and retry the build."
                     );
                     throw new InvalidOperationException(
-                        "Windows ADK Deployment Tools not installed. Required for ISO builds with Autounattend."
+                        "Windows ADK Deployment Tools not installed."
                     );
                 }
+
+                string isoPath = baseImage.LocalCachePath ?? baseImage.FileName;
+                string preparedIso = Path.Combine(workingDirectory, "prepared.iso");
+
+                addLog(
+                    executionId,
+                    Contracts.Models.LogLevel.Info,
+                    "Preparing Windows ISO with Autounattend.xml..."
+                );
+
+                string prepareScript =
+                    "$ErrorActionPreference = 'Stop'; "
+                    + $"$mount = Mount-DiskImage -ImagePath '{isoPath}' -PassThru; "
+                    + "$driveLetter = ($mount | Get-Volume).DriveLetter; "
+                    + $"$tempDir = '{Path.Combine(workingDirectory, "iso_contents")}'; "
+                    + "Copy-Item -Path \"${driveLetter}:\\\" -Destination $tempDir -Recurse -Force; "
+                    + $"Dismount-DiskImage -ImagePath '{isoPath}' | Out-Null; "
+                    + $"Copy-Item -Path '{definition.UnattendPath}' -Destination (Join-Path $tempDir 'Autounattend.xml') -Force; "
+                    + "$efiBoot = Get-ChildItem (Join-Path $tempDir 'efi\\microsoft\\boot\\efisys_noprompt.bin') -ErrorAction SilentlyContinue; "
+                    + "if (-not $efiBoot) { $efiBoot = Get-ChildItem (Join-Path $tempDir 'efi\\microsoft\\boot\\efisys.bin') -ErrorAction SilentlyContinue }; "
+                    + "if (-not $efiBoot) { throw 'Could not find efisys boot file in ISO' }; "
+                    + "$etfsBoot = Join-Path $tempDir 'boot\\etfsboot.com'; "
+                    + "$bootData = \"2#p0,e,b$etfsBoot#pEF,e,b$($efiBoot.FullName)\"; "
+                    + $"& '{oscdimgExe}' -m -o -u2 -udfver102 \"-bootdata:$bootData\" $tempDir '{preparedIso}'; "
+                    + "if ($LASTEXITCODE -ne 0) { throw \"oscdimg failed with exit code $LASTEXITCODE\" }; "
+                    + "Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue";
+
+                (int prepExit, string prepError) = await RunPowerShellAsync(
+                    prepareScript,
+                    cancellationToken
+                );
+                if (prepExit != 0)
+                {
+                    throw new InvalidOperationException($"Failed to prepare ISO: {prepError}");
+                }
+
+                addLog(executionId, Contracts.Models.LogLevel.Info, "Prepared ISO created");
+                baseImage.LocalCachePath = preparedIso;
             }
 
             addLog(executionId, Contracts.Models.LogLevel.Info, "Generating Packer template...");
@@ -319,5 +358,11 @@ public sealed class PackerBuildEngine
             cancellationToken
         );
         return (exitCode, error);
+    }
+
+    private static bool IsIsoBaseImage(BaseImage baseImage)
+    {
+        string imagePath = baseImage.LocalCachePath ?? baseImage.FileName;
+        return Path.GetExtension(imagePath).Equals(".iso", StringComparison.OrdinalIgnoreCase);
     }
 }

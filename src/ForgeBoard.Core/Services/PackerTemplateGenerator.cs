@@ -260,19 +260,14 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
         hcl.AppendLine($"  memory            = {definition.MemoryMb}");
         hcl.AppendLine($"  cpus              = {definition.CpuCount}");
         hcl.AppendLine("  generation        = 2");
+        hcl.AppendLine("  enable_secure_boot = false");
         hcl.AppendLine("  headless          = true");
         hcl.AppendLine("  switch_name       = \"Default Switch\"");
         hcl.AppendLine("  communicator      = \"winrm\"");
         (string winrmUser, string winrmPass) = GetWinrmCredentials();
         hcl.AppendLine($"  winrm_username    = \"{EscapeHcl(winrmUser)}\"");
         hcl.AppendLine($"  winrm_password    = \"{EscapeHcl(winrmPass)}\"");
-        hcl.AppendLine("  winrm_timeout     = \"30m\"");
-
-        if (definition.UnattendPath is not null)
-        {
-            hcl.AppendLine($"  cd_files          = [\"{EscapeHcl(definition.UnattendPath)}\"]");
-            hcl.AppendLine("  cd_label          = \"cidata\"");
-        }
+        hcl.AppendLine("  winrm_timeout     = \"2h\"");
 
         hcl.AppendLine("}");
     }

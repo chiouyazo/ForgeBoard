@@ -127,6 +127,20 @@ public sealed class PackerService : IPackerService
                 .WithEnvironmentVariables(env =>
                 {
                     env.Set("PACKER_POWERSHELL_ARGS", "-NoProfile -NonInteractive");
+
+                    string adkPath = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+                        @"Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\Oscdimg"
+                    );
+                    string currentPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+                    if (
+                        Directory.Exists(adkPath)
+                        && !currentPath.Contains(adkPath, StringComparison.OrdinalIgnoreCase)
+                    )
+                    {
+                        env.Set("PATH", $"{adkPath};{currentPath}");
+                    }
+
                     if (extraEnvironment is not null)
                     {
                         foreach (KeyValuePair<string, string> kvp in extraEnvironment)

@@ -129,6 +129,49 @@ public sealed class PackerBuildEngine
                 ModifiedAt = definition.ModifiedAt,
             };
 
+            if (
+                !string.IsNullOrEmpty(definition.UnattendPath)
+                && definition.Builder == PackerBuilder.HyperV
+            )
+            {
+                string adkPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+                    @"Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\Oscdimg\oscdimg.exe"
+                );
+
+                if (!File.Exists(adkPath))
+                {
+                    addLog(
+                        executionId,
+                        Contracts.Models.LogLevel.Error,
+                        "oscdimg.exe not found. Packer needs it to create the Autounattend CD for Gen 2 VMs."
+                    );
+                    addLog(
+                        executionId,
+                        Contracts.Models.LogLevel.Error,
+                        "Install the Windows ADK Deployment Tools on this server:"
+                    );
+                    addLog(
+                        executionId,
+                        Contracts.Models.LogLevel.Error,
+                        "  1. Download the ADK from https://learn.microsoft.com/en-us/windows-hardware/get-started/adk-install"
+                    );
+                    addLog(
+                        executionId,
+                        Contracts.Models.LogLevel.Error,
+                        "  2. Run: adksetup.exe /quiet /features OptionId.DeploymentTools"
+                    );
+                    addLog(
+                        executionId,
+                        Contracts.Models.LogLevel.Error,
+                        "  3. Restart ForgeBoard and retry the build."
+                    );
+                    throw new InvalidOperationException(
+                        "Windows ADK Deployment Tools not installed. Required for ISO builds with Autounattend."
+                    );
+                }
+            }
+
             addLog(executionId, Contracts.Models.LogLevel.Info, "Generating Packer template...");
             string hcl = _templateGenerator.GenerateHcl(
                 packerDefinition,

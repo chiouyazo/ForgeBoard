@@ -299,7 +299,7 @@ public sealed class ApiClient
     {
         try
         {
-            await PostAsync("api/images/validate-path", new { Path = path });
+            await PostAsync("api/validation/path", new { Path = path });
             return true;
         }
         catch

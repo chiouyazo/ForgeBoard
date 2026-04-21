@@ -344,7 +344,7 @@
                   />
                   <Button
                     Style="{StaticResource DangerButtonStyle}"
-                    Content="Delete"
+                    Content="{Binding DeleteButtonText}"
                     Click="DeleteImage_Click"
                     Tag="{Binding Id}"
                     IsEnabled="{Binding CanDelete}"

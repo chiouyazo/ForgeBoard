@@ -270,7 +270,8 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
 
         if (definition.UnattendPath is not null)
         {
-            hcl.AppendLine($"  floppy_files      = [\"{EscapeHcl(definition.UnattendPath)}\"]");
+            hcl.AppendLine($"  cd_files          = [\"{EscapeHcl(definition.UnattendPath)}\"]");
+            hcl.AppendLine("  cd_label          = \"cidata\"");
         }
 
         hcl.AppendLine("}");
@@ -374,11 +375,11 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
         BuildStep step
     )
     {
-        string[] lines = step.Content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        string escapedLines = string.Join(
-            ", ",
-            lines.Select(l => $"\"{EscapeHcl(l.TrimEnd('\r'))}\"")
+        string[] lines = step.Content.Split(
+            new[] { "\r\n", "\n", "\r" },
+            StringSplitOptions.RemoveEmptyEntries
         );
+        string escapedLines = string.Join(", ", lines.Select(l => $"\"{EscapeHcl(l.Trim())}\""));
 
         hcl.AppendLine($"  provisioner \"{provisionerType}\" {{");
         hcl.AppendLine($"    inline  = [{escapedLines}]");

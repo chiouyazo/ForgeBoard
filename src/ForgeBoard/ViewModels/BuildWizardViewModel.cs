@@ -482,11 +482,6 @@ public partial class BuildWizardViewModel : ObservableObject
             ValidationMessage = "Please enter an output name.";
             return;
         }
-        if (BuildSteps.Count == 0)
-        {
-            ValidationMessage = "Please add at least one build step.";
-            return;
-        }
         ValidationMessage = "Validation passed.";
     }
 

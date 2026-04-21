@@ -104,31 +104,8 @@ public sealed class ImageManager : IImageManager
         BaseImage? image = _db.BaseImages.FindById(id);
         if (image is not null)
         {
-            bool isRemote = image.Origin == ImageOrigin.Imported;
-            if (!isRemote && image.LocalCachePath is not null && File.Exists(image.LocalCachePath))
-            {
-                try
-                {
-                    File.Delete(image.LocalCachePath);
-                    _logger.LogInformation(
-                        "Deleted cached file {Path} for base image {Id}",
-                        image.LocalCachePath,
-                        id
-                    );
-                }
-                catch (IOException ex)
-                {
-                    _logger.LogWarning(
-                        ex,
-                        "Failed to delete cached file {Path} for base image {Id}",
-                        image.LocalCachePath,
-                        id
-                    );
-                }
-            }
-
             _db.BaseImages.Delete(id);
-            _logger.LogInformation("Deleted base image {Id}", id);
+            _logger.LogInformation("Removed base image {Id} ({Name})", id, image.Name);
         }
 
         return Task.CompletedTask;

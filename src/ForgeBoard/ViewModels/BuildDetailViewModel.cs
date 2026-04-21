@@ -52,6 +52,15 @@ public partial class BuildDetailViewModel : ObservableObject
                 return $"Build failed before logging started: {errorText}";
             }
 
+            string[] errorLines = errorText.Split(
+                new[] { "\r\n", "\n", "\r" },
+                StringSplitOptions.None
+            );
+            if (errorLines.Length > 5)
+            {
+                return string.Join("\n", errorLines.Take(5)) + "\n...";
+            }
+
             return errorText;
         }
     }

@@ -22,4 +22,5 @@ public sealed class ImageListItem
             Microsoft.UI.ColorHelper.FromArgb(255, 158, 158, 158)
         );
     public bool CanDelete { get; set; } = true;
+    public string DeleteButtonText => IsBaseImage ? "Remove" : "Delete";
 }

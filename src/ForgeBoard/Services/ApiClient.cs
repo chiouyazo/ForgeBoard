@@ -472,6 +472,17 @@ public sealed class ApiClient
         await PostAsync("api/settings/restart");
     }
 
+    public async Task<string?> DetectPackerAsync()
+    {
+        HttpResponseMessage response = await _http.GetAsync("api/settings/detect-packer");
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+        string result = await response.Content.ReadAsStringAsync();
+        return string.IsNullOrEmpty(result) ? null : result.Trim('"');
+    }
+
     public async Task<string> GetPackerVersionAsync(string packerPath)
     {
         HttpResponseMessage response = await _http.GetAsync(

@@ -256,6 +256,69 @@ public sealed class SettingsController : ControllerBase
     }
 
     /// <summary>
+    /// Searches for the Packer executable on the server.
+    /// </summary>
+    [HttpGet("detect-packer")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public ActionResult<string> DetectPacker()
+    {
+        string packerExe = "packer.exe";
+
+        string? pathResult = SearchInPath(packerExe);
+        if (pathResult is not null)
+        {
+            return Ok(pathResult);
+        }
+
+        List<string> candidates = new List<string>
+        {
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "Packer",
+                packerExe
+            ),
+            Path.Combine("C:\\HashiCorp\\Packer", packerExe),
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "packer",
+                packerExe
+            ),
+        };
+
+        foreach (string candidate in candidates)
+        {
+            if (System.IO.File.Exists(candidate))
+            {
+                return Ok(candidate);
+            }
+        }
+
+        return NotFound("Packer not found on server");
+    }
+
+    private static string? SearchInPath(string executable)
+    {
+        string? pathEnv = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrEmpty(pathEnv))
+        {
+            return null;
+        }
+
+        string[] directories = pathEnv.Split(';', StringSplitOptions.RemoveEmptyEntries);
+        foreach (string directory in directories)
+        {
+            string fullPath = Path.Combine(directory, executable);
+            if (System.IO.File.Exists(fullPath))
+            {
+                return fullPath;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Restarts the API process. Spawns a detached relauncher and shuts down gracefully.
     /// </summary>
     [HttpPost("restart")]

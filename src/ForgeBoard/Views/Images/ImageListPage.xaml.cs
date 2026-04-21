@@ -840,25 +840,17 @@ public sealed partial class ImageListPage : Page
         }
     }
 
-    private void AutoFillFromPath(string path)
+    private async void AutoFillFromPath(string path)
     {
         try
         {
-            if (System.IO.File.Exists(path))
+            if (string.IsNullOrWhiteSpace(LocalNameBox.Text))
             {
-                System.IO.FileInfo fileInfo = new System.IO.FileInfo(path);
-                long sizeMb = fileInfo.Length / (1024 * 1024);
-                FileSizeText.Text = $"File size: {sizeMb} MB";
+                LocalNameBox.Text = System.IO.Path.GetFileNameWithoutExtension(path);
+            }
 
-                if (string.IsNullOrWhiteSpace(LocalNameBox.Text))
-                {
-                    LocalNameBox.Text = System.IO.Path.GetFileNameWithoutExtension(path);
-                }
-            }
-            else
-            {
-                FileSizeText.Text = string.Empty;
-            }
+            bool exists = await App.ApiClient.ValidatePathAsync(path);
+            FileSizeText.Text = exists ? "File found on server" : string.Empty;
         }
         catch
         {

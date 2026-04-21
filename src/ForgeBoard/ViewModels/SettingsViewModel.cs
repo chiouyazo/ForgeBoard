@@ -303,7 +303,19 @@ public partial class SettingsViewModel : ObservableObject
         PackerVersion = "Searching...";
         DetectedPackerPath = string.Empty;
 
-        string? foundPath = SearchForPacker();
+        string? foundPath = null;
+#if HAS_UNO_SKIA
+        foundPath = SearchForPacker();
+#else
+        try
+        {
+            foundPath = await _api.DetectPackerAsync();
+        }
+        catch
+        {
+            foundPath = null;
+        }
+#endif
 
         if (foundPath is null)
         {

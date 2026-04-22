@@ -303,9 +303,36 @@ public sealed class PackerBuildEngine
             if (tempVmName is not null)
             {
                 await PowerShellRunner.RunFireAndForgetAsync(
-                    $"Remove-VM -Name '{tempVmName}' -Force -ErrorAction SilentlyContinue"
+                    $"Stop-VM -Name '{tempVmName}' -Force -TurnOff -ErrorAction SilentlyContinue; "
+                        + $"Remove-VM -Name '{tempVmName}' -Force -ErrorAction SilentlyContinue"
                 );
                 _logger.LogInformation("Cleaned up temporary VM {VmName}", tempVmName);
+            }
+
+            string packerVmName = PackerTemplateGenerator.GenerateVmName(definition);
+            await PowerShellRunner.RunFireAndForgetAsync(
+                $"$vm = Get-VM -Name '{packerVmName}' -ErrorAction SilentlyContinue; "
+                    + "if ($vm) { "
+                    + $"Stop-VM -Name '{packerVmName}' -Force -TurnOff -ErrorAction SilentlyContinue; "
+                    + $"Remove-VM -Name '{packerVmName}' -Force -ErrorAction SilentlyContinue "
+                    + "}"
+            );
+
+            if (Directory.Exists(outputDirectory))
+            {
+                string[] files = Directory.GetFiles(
+                    outputDirectory,
+                    "*",
+                    SearchOption.AllDirectories
+                );
+                if (files.Length == 0)
+                {
+                    try
+                    {
+                        Directory.Delete(outputDirectory, true);
+                    }
+                    catch { }
+                }
             }
 
             _fileServer.Stop(executionId);

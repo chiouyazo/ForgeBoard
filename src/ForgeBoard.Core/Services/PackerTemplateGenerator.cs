@@ -9,11 +9,14 @@ namespace ForgeBoard.Core.Services;
 public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
 {
     private readonly ForgeBoardDatabase _db;
+    private readonly IAppPaths _appPaths;
 
-    public PackerTemplateGenerator(ForgeBoardDatabase db)
+    public PackerTemplateGenerator(ForgeBoardDatabase db, IAppPaths appPaths)
     {
         ArgumentNullException.ThrowIfNull(db);
+        ArgumentNullException.ThrowIfNull(appPaths);
         _db = db;
+        _appPaths = appPaths;
     }
 
     private (string Username, string Password) GetWinrmCredentials()
@@ -179,7 +182,7 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
         }
     }
 
-    private static string GenerateVmName(BuildDefinition definition)
+    public static string GenerateVmName(BuildDefinition definition)
     {
         string safeName = System
             .Text.RegularExpressions.Regex.Replace(definition.Name, @"[^a-zA-Z0-9\-_]", "-")
@@ -255,6 +258,7 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
         hcl.AppendLine($"  iso_url           = \"{EscapeHcl(isoPath)}\"");
         hcl.AppendLine($"  iso_checksum      = \"{EscapeHcl(checksum)}\"");
         hcl.AppendLine($"  output_directory  = \"{EscapeHcl(outputDirectory)}\"");
+        hcl.AppendLine($"  temp_path         = \"{EscapeHcl(_appPaths.TempDirectory)}\"");
         hcl.AppendLine("  shutdown_command   = \"shutdown /s /t 10 /f\"");
         hcl.AppendLine($"  disk_size         = {definition.DiskSizeMb}");
         hcl.AppendLine($"  memory            = {definition.MemoryMb}");
@@ -296,6 +300,7 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
         }
 
         hcl.AppendLine($"  output_directory  = \"{EscapeHcl(outputDirectory)}\"");
+        hcl.AppendLine($"  temp_path         = \"{EscapeHcl(_appPaths.TempDirectory)}\"");
         hcl.AppendLine("  shutdown_command   = \"shutdown /s /t 10 /f\"");
         hcl.AppendLine($"  memory            = {definition.MemoryMb}");
         hcl.AppendLine($"  cpus              = {definition.CpuCount}");

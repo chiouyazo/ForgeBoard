@@ -22,7 +22,7 @@ public class PackerTemplateGeneratorTests
         _paths = new TestAppPaths(_tempDir);
         _paths.EnsureDirectoriesExist();
         _db = new ForgeBoardDatabase(_paths);
-        _generator = new PackerTemplateGenerator(_db);
+        _generator = new PackerTemplateGenerator(_db, _paths);
     }
 
     [TearDown]

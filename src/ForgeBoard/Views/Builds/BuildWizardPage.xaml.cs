@@ -193,6 +193,11 @@ public sealed partial class BuildWizardPage : Page
         }
     }
 
+    private void StepTypeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        _viewModel.NotifyStepTypeChanged();
+    }
+
     private void CloseStepEdit_Click(object sender, RoutedEventArgs e)
     {
         _viewModel.SelectedStepForEdit = null;

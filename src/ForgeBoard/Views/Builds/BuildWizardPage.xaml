@@ -474,8 +474,16 @@
                     TextWrapping="NoWrap"
                     HorizontalAlignment="Stretch"
                   />
+                  <ComboBox
+                    Header="Type"
+                    ItemsSource="{Binding AvailableStepTypes}"
+                    SelectedItem="{Binding SelectedStepForEdit.StepType, Mode=TwoWay}"
+                    FontSize="12"
+                    SelectionChanged="StepTypeComboBox_SelectionChanged"
+                  />
+
                   <TextBox
-                    Header="Content"
+                    Header="Script"
                     AcceptsReturn="True"
                     Text="{Binding SelectedStepForEdit.Content, Mode=TwoWay}"
                     MaxHeight="200"
@@ -484,29 +492,58 @@
                     TextWrapping="Wrap"
                     HorizontalAlignment="Stretch"
                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                    Visibility="{Binding IsScriptStep, Converter={StaticResource BoolToVisibilityConverter}}"
                   />
+
+                  <TextBox
+                    Header="Script file path (on build host)"
+                    Text="{Binding SelectedStepForEdit.Content, Mode=TwoWay}"
+                    FontSize="12"
+                    AcceptsReturn="False"
+                    TextWrapping="NoWrap"
+                    HorizontalAlignment="Stretch"
+                    PlaceholderText="C:\scripts\install.ps1"
+                    Visibility="{Binding IsFilePathStep, Converter={StaticResource BoolToVisibilityConverter}}"
+                  />
+
+                  <StackPanel
+                    Spacing="8"
+                    Visibility="{Binding IsFileUploadStep, Converter={StaticResource BoolToVisibilityConverter}}"
+                  >
+                    <TextBox
+                      Header="Source path (on build host)"
+                      Text="{Binding EditSource, Mode=TwoWay}"
+                      FontSize="12"
+                      AcceptsReturn="False"
+                      TextWrapping="NoWrap"
+                      HorizontalAlignment="Stretch"
+                      PlaceholderText="C:\files\myfile.txt"
+                    />
+                    <TextBox
+                      Header="Destination path (on VM)"
+                      Text="{Binding EditDestination, Mode=TwoWay}"
+                      FontSize="12"
+                      AcceptsReturn="False"
+                      TextWrapping="NoWrap"
+                      HorizontalAlignment="Stretch"
+                      PlaceholderText="C:\install\myfile.txt"
+                    />
+                  </StackPanel>
+
                   <Grid>
                     <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="*" />
                       <ColumnDefinition Width="Auto" />
                       <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock
-                      Grid.Column="0"
-                      Text="{Binding SelectedStepForEdit.StepType}"
-                      FontSize="11"
-                      Foreground="{StaticResource HintBrush}"
-                      VerticalAlignment="Center"
-                    />
                     <CheckBox
-                      Grid.Column="1"
+                      Grid.Column="0"
                       Content="Run via Packer"
                       IsChecked="{Binding SelectedStepForEdit.UsePacker, Mode=TwoWay}"
                       VerticalAlignment="Center"
-                      Margin="8,0"
+                      Margin="0,0,8,0"
                     />
                     <TextBox
-                      Grid.Column="2"
+                      Grid.Column="1"
                       Header="Timeout (sec)"
                       Text="{Binding SelectedStepForEdit.TimeoutSeconds, Mode=TwoWay}"
                       FontSize="12"

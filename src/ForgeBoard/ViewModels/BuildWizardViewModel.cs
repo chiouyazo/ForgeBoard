@@ -34,6 +34,8 @@ public partial class BuildWizardViewModel : ObservableObject
 
     public ObservableCollection<PackerBuilder> AvailableBuilders { get; } =
         new ObservableCollection<PackerBuilder>();
+    public List<BuildStepType> AvailableStepTypes { get; } =
+        Enum.GetValues<BuildStepType>().ToList();
     public List<string> AvailableOutputFormats { get; } =
         new List<string> { "qcow2", "vhdx", "vmdk", "raw" };
 
@@ -96,7 +98,74 @@ public partial class BuildWizardViewModel : ObservableObject
     private string _stepSearchText = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsScriptStep))]
+    [NotifyPropertyChangedFor(nameof(IsFileUploadStep))]
+    [NotifyPropertyChangedFor(nameof(IsFilePathStep))]
+    [NotifyPropertyChangedFor(nameof(IsRestartStep))]
+    [NotifyPropertyChangedFor(nameof(EditSource))]
+    [NotifyPropertyChangedFor(nameof(EditDestination))]
     private BuildStep? _selectedStepForEdit;
+
+    public bool IsScriptStep =>
+        SelectedStepForEdit?.StepType
+            is BuildStepType.PowerShell
+                or BuildStepType.Shell
+                or BuildStepType.Custom;
+
+    public bool IsFileUploadStep => SelectedStepForEdit?.StepType == BuildStepType.FileUpload;
+
+    public bool IsFilePathStep =>
+        SelectedStepForEdit?.StepType is BuildStepType.PowerShellFile or BuildStepType.ShellFile;
+
+    public bool IsRestartStep => SelectedStepForEdit?.StepType == BuildStepType.WindowsRestart;
+
+    public string EditSource
+    {
+        get
+        {
+            if (SelectedStepForEdit is null)
+                return string.Empty;
+            string[] parts = SelectedStepForEdit.Content.Split('\n', 2);
+            return parts[0].Trim();
+        }
+        set
+        {
+            if (SelectedStepForEdit is null)
+                return;
+            string dest = EditDestination;
+            SelectedStepForEdit.Content = string.IsNullOrEmpty(dest) ? value : $"{value}\n{dest}";
+            OnPropertyChanged(nameof(EditSource));
+        }
+    }
+
+    public string EditDestination
+    {
+        get
+        {
+            if (SelectedStepForEdit is null)
+                return string.Empty;
+            string[] parts = SelectedStepForEdit.Content.Split('\n', 2);
+            return parts.Length > 1 ? parts[1].Trim() : string.Empty;
+        }
+        set
+        {
+            if (SelectedStepForEdit is null)
+                return;
+            string src = EditSource;
+            SelectedStepForEdit.Content = string.IsNullOrEmpty(value) ? src : $"{src}\n{value}";
+            OnPropertyChanged(nameof(EditDestination));
+        }
+    }
+
+    public void NotifyStepTypeChanged()
+    {
+        OnPropertyChanged(nameof(IsScriptStep));
+        OnPropertyChanged(nameof(IsFileUploadStep));
+        OnPropertyChanged(nameof(IsFilePathStep));
+        OnPropertyChanged(nameof(IsRestartStep));
+        OnPropertyChanged(nameof(EditSource));
+        OnPropertyChanged(nameof(EditDestination));
+    }
 
     public event Action<string>? NavigateToBuildDetail;
     public event Action? NavigateToBuildList;

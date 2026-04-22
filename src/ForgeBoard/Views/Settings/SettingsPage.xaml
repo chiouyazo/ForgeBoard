@@ -132,6 +132,11 @@
               Password="{Binding WinrmPassword, Mode=TwoWay}"
               PlaceholderText="Admin123!"
             />
+            <TextBox
+              Header="Hyper-V Switch"
+              Text="{Binding HyperVSwitch, Mode=TwoWay}"
+              PlaceholderText="Default Switch"
+            />
           </StackPanel>
         </Border>
 

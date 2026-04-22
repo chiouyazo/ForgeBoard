@@ -60,6 +60,9 @@ public partial class SettingsViewModel : ObservableObject
     private string _winrmPassword = "Admin123!";
 
     [ObservableProperty]
+    private string _hyperVSwitch = "Default Switch";
+
+    [ObservableProperty]
     private string _currentDataDirectory = string.Empty;
 
     [ObservableProperty]
@@ -161,6 +164,7 @@ public partial class SettingsViewModel : ObservableObject
             DefaultBuilder = Settings.DefaultBuilder;
             WinrmUsername = Settings.WinrmUsername ?? "Administrator";
             WinrmPassword = Settings.WinrmPassword ?? "Admin123!";
+            HyperVSwitch = Settings.HyperVSwitch ?? "Default Switch";
 
             await LoadStorageAsync();
         }
@@ -255,6 +259,9 @@ public partial class SettingsViewModel : ObservableObject
             Settings.WinrmPassword = string.IsNullOrWhiteSpace(WinrmPassword)
                 ? "Admin123!"
                 : WinrmPassword;
+            Settings.HyperVSwitch = string.IsNullOrWhiteSpace(HyperVSwitch)
+                ? "Default Switch"
+                : HyperVSwitch;
             Settings.ModifiedAt = DateTimeOffset.UtcNow;
 
             await _api.SaveSettingsAsync(Settings);

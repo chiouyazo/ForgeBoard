@@ -1,27 +1,33 @@
+using ForgeBoard.Contracts;
 using ForgeBoard.Contracts.Interfaces;
 using ForgeBoard.Contracts.Models;
+using ForgeBoard.Core.Data;
 using Microsoft.Extensions.Logging;
 
 namespace ForgeBoard.Core.Services.Build;
 
 public sealed class PackerBuildEngine
 {
+    private readonly ForgeBoardDatabase _db;
     private readonly PackerService _packerService;
     private readonly IPackerTemplateGenerator _templateGenerator;
     private readonly BuildFileServer _fileServer;
     private readonly ILogger<PackerBuildEngine> _logger;
 
     public PackerBuildEngine(
+        ForgeBoardDatabase db,
         PackerService packerService,
         IPackerTemplateGenerator templateGenerator,
         BuildFileServer fileServer,
         ILogger<PackerBuildEngine> logger
     )
     {
+        ArgumentNullException.ThrowIfNull(db);
         ArgumentNullException.ThrowIfNull(packerService);
         ArgumentNullException.ThrowIfNull(templateGenerator);
         ArgumentNullException.ThrowIfNull(fileServer);
         ArgumentNullException.ThrowIfNull(logger);
+        _db = db;
 
         _packerService = packerService;
         _templateGenerator = templateGenerator;
@@ -86,7 +92,7 @@ public sealed class PackerBuildEngine
                     + $"Set-VMProcessor -VMName '{tempVmName}' -Count {definition.CpuCount}; "
                     + $"Set-VMMemory -VMName '{tempVmName}' -DynamicMemoryEnabled $false; "
                     + $"Set-VMFirmware -VMName '{tempVmName}' -EnableSecureBoot Off; "
-                    + "$sw = Get-VMSwitch -Name 'Default Switch' -ErrorAction SilentlyContinue; "
+                    + $"$sw = Get-VMSwitch -Name '{GetHyperVSwitch()}' -ErrorAction SilentlyContinue; "
                     + $"if ($sw) {{ Add-VMNetworkAdapter -VMName '{tempVmName}' -SwitchName $sw.Name }}";
 
                 (int exitCodeVm, string errorVm) = await RunPowerShellAsync(
@@ -391,5 +397,13 @@ public sealed class PackerBuildEngine
     {
         string imagePath = baseImage.LocalCachePath ?? baseImage.FileName;
         return Path.GetExtension(imagePath).Equals(".iso", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string GetHyperVSwitch()
+    {
+        AppSettings? settings = _db.AppSettings.FindById(KnownIds.DefaultSettings);
+        return !string.IsNullOrWhiteSpace(settings?.HyperVSwitch)
+            ? settings.HyperVSwitch
+            : "Default Switch";
     }
 }

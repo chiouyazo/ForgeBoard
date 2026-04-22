@@ -27,6 +27,14 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
         return (username, password);
     }
 
+    private string GetHyperVSwitch()
+    {
+        AppSettings? settings = _db.AppSettings.FindById(KnownIds.DefaultSettings);
+        return !string.IsNullOrWhiteSpace(settings?.HyperVSwitch)
+            ? settings.HyperVSwitch
+            : "Default Switch";
+    }
+
     public string GenerateHcl(
         BuildDefinition definition,
         BaseImage baseImage,
@@ -266,7 +274,7 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
         hcl.AppendLine("  generation        = 2");
         hcl.AppendLine("  enable_secure_boot = false");
         hcl.AppendLine("  headless          = true");
-        hcl.AppendLine("  switch_name       = \"Default Switch\"");
+        hcl.AppendLine($"  switch_name       = \"{EscapeHcl(GetHyperVSwitch())}\"");
         hcl.AppendLine("  communicator      = \"winrm\"");
         (string winrmUser, string winrmPass) = GetWinrmCredentials();
         hcl.AppendLine($"  winrm_username    = \"{EscapeHcl(winrmUser)}\"");
@@ -306,7 +314,7 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
         hcl.AppendLine($"  cpus              = {definition.CpuCount}");
         hcl.AppendLine("  generation        = 2");
         hcl.AppendLine("  headless          = true");
-        hcl.AppendLine("  switch_name       = \"Default Switch\"");
+        hcl.AppendLine($"  switch_name       = \"{EscapeHcl(GetHyperVSwitch())}\"");
         hcl.AppendLine("  communicator      = \"winrm\"");
         (string winrmUser, string winrmPass) = GetWinrmCredentials();
         hcl.AppendLine($"  winrm_username    = \"{EscapeHcl(winrmUser)}\"");

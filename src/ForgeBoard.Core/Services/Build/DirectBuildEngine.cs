@@ -42,6 +42,17 @@ public sealed class DirectBuildEngine
         }
     }
 
+    private string HyperVSwitch
+    {
+        get
+        {
+            AppSettings? settings = _db.AppSettings.FindById(KnownIds.DefaultSettings);
+            return !string.IsNullOrWhiteSpace(settings?.HyperVSwitch)
+                ? settings.HyperVSwitch
+                : "Default Switch";
+        }
+    }
+
     public async Task<BuildEngineResult> ExecuteAsync(
         string executionId,
         List<BuildStep> steps,
@@ -96,7 +107,7 @@ public sealed class DirectBuildEngine
                 + $"Set-VMFirmware -VMName '{vmName}' -EnableSecureBoot Off\n"
                 + $"Set-VMKeyProtector -VMName '{vmName}' -NewLocalKeyProtector\n"
                 + $"Enable-VMTPM -VMName '{vmName}'\n"
-                + $"$sw = Get-VMSwitch -Name 'Default Switch' -ErrorAction SilentlyContinue\n"
+                + $"$sw = Get-VMSwitch -Name '{HyperVSwitch}' -ErrorAction SilentlyContinue\n"
                 + $"if ($sw) {{ Add-VMNetworkAdapter -VMName '{vmName}' -SwitchName $sw.Name }}\n"
                 + $"Start-VM -Name '{vmName}'";
 

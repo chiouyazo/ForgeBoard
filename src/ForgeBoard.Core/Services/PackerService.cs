@@ -9,13 +9,16 @@ namespace ForgeBoard.Core.Services;
 
 public sealed class PackerService : IPackerService
 {
+    private readonly IAppPaths _appPaths;
     private readonly ILogger<PackerService> _logger;
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _runningBuilds =
         new ConcurrentDictionary<string, CancellationTokenSource>();
 
-    public PackerService(ILogger<PackerService> logger)
+    public PackerService(IAppPaths appPaths, ILogger<PackerService> logger)
     {
+        ArgumentNullException.ThrowIfNull(appPaths);
         ArgumentNullException.ThrowIfNull(logger);
+        _appPaths = appPaths;
         _logger = logger;
     }
 
@@ -127,6 +130,8 @@ public sealed class PackerService : IPackerService
                 .WithEnvironmentVariables(env =>
                 {
                     env.Set("PACKER_POWERSHELL_ARGS", "-NoProfile -NonInteractive");
+                    env.Set("TEMP", _appPaths.TempDirectory);
+                    env.Set("TMP", _appPaths.TempDirectory);
 
                     string adkPath = Path.Combine(
                         Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),

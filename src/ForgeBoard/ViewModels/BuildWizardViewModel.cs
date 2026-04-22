@@ -192,6 +192,14 @@ public partial class BuildWizardViewModel : ObservableObject
         }
     }
 
+    partial void OnSelectedBaseImageChanged(BaseImageDisplayItem? value)
+    {
+        if (!IsIsoBaseImage)
+        {
+            UnattendPath = string.Empty;
+        }
+    }
+
     public bool IsFirstStep => CurrentStep == 0;
     public bool IsLastStep => CurrentStep == 3;
     public string NextButtonText => IsLastStep ? "Start Build" : "Next";

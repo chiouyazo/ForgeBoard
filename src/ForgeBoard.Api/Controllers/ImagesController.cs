@@ -18,6 +18,7 @@ public sealed class ImagesController : ControllerBase
     private readonly IImageManager _imageManager;
     private readonly ICacheService _cacheService;
     private readonly ArtifactPublisher _publisher;
+    private readonly VmLauncher _vmLauncher;
     private readonly ForgeBoardDatabase _db;
     private readonly ILogger<ImagesController> _logger;
 
@@ -25,6 +26,7 @@ public sealed class ImagesController : ControllerBase
         IImageManager imageManager,
         ICacheService cacheService,
         ArtifactPublisher publisher,
+        VmLauncher vmLauncher,
         ForgeBoardDatabase db,
         ILogger<ImagesController> logger
     )
@@ -32,11 +34,13 @@ public sealed class ImagesController : ControllerBase
         ArgumentNullException.ThrowIfNull(imageManager);
         ArgumentNullException.ThrowIfNull(cacheService);
         ArgumentNullException.ThrowIfNull(publisher);
+        ArgumentNullException.ThrowIfNull(vmLauncher);
         ArgumentNullException.ThrowIfNull(db);
         ArgumentNullException.ThrowIfNull(logger);
         _imageManager = imageManager;
         _cacheService = cacheService;
         _publisher = publisher;
+        _vmLauncher = vmLauncher;
         _db = db;
         _logger = logger;
     }
@@ -539,73 +543,62 @@ public sealed class ImagesController : ControllerBase
     }
 
     /// <summary>
-    /// Creates a Hyper-V VM from an artifact's VHDX using a differencing disk.
+    /// Starts launching a Hyper-V VM from an artifact in the background. Returns immediately.
     /// </summary>
     [HttpPost("artifacts/{id}/launch-vm")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult> LaunchVm(string id, CancellationToken cancellationToken)
+    public ActionResult LaunchVm(string id, [FromBody] VmLaunchRequest? request)
     {
         try
         {
-            ImageArtifact? artifact = await _imageManager.GetArtifactAsync(id, cancellationToken);
-            if (artifact is null)
-            {
-                return NotFound($"Artifact {id} not found");
-            }
-
-            if (!System.IO.File.Exists(artifact.FilePath))
-            {
-                return NotFound($"Artifact file not found: {artifact.FilePath}");
-            }
-
-            string safeName = System.Text.RegularExpressions.Regex.Replace(
-                artifact.Name,
-                @"[^a-zA-Z0-9\-]",
-                "-"
-            );
-            if (safeName.Length > 30)
-                safeName = safeName[..30];
-            string vmName = $"FB-{safeName}";
-            string vmBaseDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "ForgeBoard-VMs"
-            );
-            string vmDir = Path.Combine(vmBaseDir, vmName);
-            Directory.CreateDirectory(vmDir);
-
-            string vhdCopyPath = Path.Combine(vmDir, $"{vmName}.vhdx");
-            string script =
-                $"Copy-Item -Path '{artifact.FilePath}' -Destination '{vhdCopyPath}' -Force\n"
-                + $"$vm = New-VM -Name '{vmName}' -Generation 2 -VHDPath '{vhdCopyPath}' -MemoryStartupBytes 4GB -Path '{vmDir}'\n"
-                + $"Set-VMProcessor -VMName '{vmName}' -Count 2\n"
-                + $"Set-VMFirmware -VMName '{vmName}' -EnableSecureBoot Off\n"
-                + $"Set-VMKeyProtector -VMName '{vmName}' -NewLocalKeyProtector\n"
-                + $"Enable-VMTPM -VMName '{vmName}'\n"
-                + $"$sw = Get-VMSwitch -Name 'Default Switch' -ErrorAction SilentlyContinue\n"
-                + $"if ($sw) {{ Add-VMNetworkAdapter -VMName '{vmName}' -SwitchName $sw.Name }}\n"
-                + $"Start-VM -Name '{vmName}'";
-
-            (int exitCode, string output, string error) =
-                await ForgeBoard.Core.Services.Build.PowerShellRunner.RunAsync(
-                    script,
-                    cancellationToken
-                );
-            if (exitCode != 0)
-            {
-                return Problem($"Failed to create VM: {error}", statusCode: 500);
-            }
-
-            RegisterWithVmManager(vmName, artifact);
-
-            return Ok(new { vmName = vmName, message = $"VM '{vmName}' created and started" });
+            _vmLauncher.StartLaunch(id, request);
+            return Accepted();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to launch VM from artifact {Id}", id);
             return Problem($"Failed to launch VM: {ex.Message}", statusCode: 500);
         }
+    }
+
+    /// <summary>
+    /// Gets the progress of a VM launch.
+    /// </summary>
+    [HttpGet("artifacts/{id}/launch-progress")]
+    [ProducesResponseType(typeof(VmLaunchProgress), StatusCodes.Status200OK)]
+    public ActionResult<VmLaunchProgress> GetLaunchProgress(string id)
+    {
+        VmLaunchProgress? progress = _vmLauncher.GetProgress(id);
+        return Ok(
+            progress ?? new VmLaunchProgress { Status = "No launch in progress", IsComplete = true }
+        );
+    }
+
+    /// <summary>
+    /// Gets all active and recent VM launches.
+    /// </summary>
+    [HttpGet("artifacts/active-launches")]
+    [ProducesResponseType(typeof(Dictionary<string, VmLaunchProgress>), StatusCodes.Status200OK)]
+    public ActionResult<Dictionary<string, VmLaunchProgress>> GetActiveLaunches()
+    {
+        return Ok(_vmLauncher.GetAllLaunches());
+    }
+
+    /// <summary>
+    /// Dismisses a completed VM launch notification.
+    /// </summary>
+    [HttpPost("artifacts/{id}/dismiss-launch")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public ActionResult DismissLaunch(string id)
+    {
+        _vmLauncher.DismissLaunch(id);
+        return NoContent();
     }
 
     /// <summary>

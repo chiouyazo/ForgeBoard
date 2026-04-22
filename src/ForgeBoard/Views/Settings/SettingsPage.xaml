@@ -137,6 +137,11 @@
               Text="{Binding HyperVSwitch, Mode=TwoWay}"
               PlaceholderText="Default Switch"
             />
+            <TextBox
+              Header="VmManager Agent URL"
+              Text="{Binding VmManagerAgentUrl, Mode=TwoWay}"
+              PlaceholderText="http://localhost:18275"
+            />
           </StackPanel>
         </Border>
 

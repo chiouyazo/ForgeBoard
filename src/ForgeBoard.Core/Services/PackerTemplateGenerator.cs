@@ -196,8 +196,10 @@ public sealed class PackerTemplateGenerator : IPackerTemplateGenerator
             .Text.RegularExpressions.Regex.Replace(definition.Name, @"[^a-zA-Z0-9\-_]", "-")
             .Trim('-');
         if (string.IsNullOrEmpty(safeName))
+        {
             safeName = "forgeboard";
-        string shortId = definition.Id.Length > 8 ? definition.Id[..8] : definition.Id;
+        }
+        string shortId = Guid.NewGuid().ToString("N")[..8];
         return $"{safeName}-{shortId}";
     }
 

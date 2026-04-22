@@ -18,6 +18,8 @@ public sealed class ImageArtifact
 
     public string Format { get; set; } = "qcow2";
 
+    public string Version { get; set; } = string.Empty;
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public List<string> Tags { get; set; } = new List<string>();

@@ -37,6 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPostProcessor, ChecksumPostProcessor>();
 
         services.AddSingleton<ArtifactPublisher>();
+        services.AddSingleton<VmLauncher>();
         services.AddSingleton<BuildFileServer>();
         services.AddSingleton<BuildReadinessChecker>();
         services.AddSingleton<DirectBuildEngine>();

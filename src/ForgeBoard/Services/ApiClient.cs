@@ -308,15 +308,30 @@ public sealed class ApiClient
         }
     }
 
-    public async Task<string> LaunchVmAsync(string artifactId)
+    public async Task LaunchVmAsync(string artifactId, string? vmName = null)
     {
-        HttpResponseMessage response = await _http.PostAsync(
-            $"api/images/artifacts/{artifactId}/launch-vm",
-            null
+        VmLaunchRequest request = new VmLaunchRequest { VmName = vmName };
+        await PostAsync($"api/images/artifacts/{artifactId}/launch-vm", request);
+    }
+
+    public async Task<VmLaunchProgress> GetLaunchProgressAsync(string artifactId)
+    {
+        VmLaunchProgress? result = await GetJsonNullableAsync<VmLaunchProgress>(
+            $"api/images/artifacts/{artifactId}/launch-progress"
         );
-        await EnsureSuccessAsync(response);
-        string json = await response.Content.ReadAsStringAsync();
-        return json;
+        return result ?? new VmLaunchProgress { Status = "Unknown", IsComplete = true };
+    }
+
+    public async Task<Dictionary<string, VmLaunchProgress>> GetActiveLaunchesAsync()
+    {
+        return await GetJsonAsync<Dictionary<string, VmLaunchProgress>>(
+            "api/images/artifacts/active-launches"
+        );
+    }
+
+    public async Task DismissLaunchAsync(string artifactId)
+    {
+        await PostAsync($"api/images/artifacts/{artifactId}/dismiss-launch");
     }
 
     public async Task PromoteArtifactAsync(string id)

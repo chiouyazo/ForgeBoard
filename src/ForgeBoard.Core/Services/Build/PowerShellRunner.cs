@@ -19,12 +19,28 @@ public static class PowerShellRunner
         return Path.Combine(_tempBasePath, $"{Guid.NewGuid()}.ps1");
     }
 
+    private static string ResolvePowerShellExe()
+    {
+        string? pwshPath = null;
+        try
+        {
+            pwshPath = Environment
+                .GetEnvironmentVariable("PATH")
+                ?.Split(Path.PathSeparator)
+                .Select(dir => Path.Combine(dir, "pwsh.exe"))
+                .FirstOrDefault(File.Exists);
+        }
+        catch { }
+
+        return pwshPath ?? "powershell";
+    }
+
     public static async Task<(int ExitCode, string Output, string Error)> RunAsync(
         string script,
         CancellationToken ct
     )
     {
-        BufferedCommandResult result = await Cli.Wrap("powershell")
+        BufferedCommandResult result = await Cli.Wrap(ResolvePowerShellExe())
             .WithArguments(new[] { "-NoProfile", "-NonInteractive", "-Command", script })
             .WithValidation(CommandResultValidation.None)
             .ExecuteBufferedAsync(ct);
@@ -36,7 +52,7 @@ public static class PowerShellRunner
     {
         try
         {
-            BufferedCommandResult result = await Cli.Wrap("powershell")
+            BufferedCommandResult result = await Cli.Wrap(ResolvePowerShellExe())
                 .WithArguments(new[] { "-NoProfile", "-NonInteractive", "-Command", script })
                 .WithValidation(CommandResultValidation.None)
                 .ExecuteBufferedAsync(CancellationToken.None);
@@ -132,7 +148,7 @@ public static class PowerShellRunner
             System.Text.StringBuilder outputBuilder = new System.Text.StringBuilder();
             System.Text.StringBuilder errorBuilder = new System.Text.StringBuilder();
 
-            CommandResult result = await Cli.Wrap("pwsh")
+            CommandResult result = await Cli.Wrap(ResolvePowerShellExe())
                 .WithArguments(
                     new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", tempFile }
                 )
@@ -215,7 +231,7 @@ public static class PowerShellRunner
         {
             await File.WriteAllTextAsync(tempFile, script, ct);
 
-            BufferedCommandResult result = await Cli.Wrap("pwsh")
+            BufferedCommandResult result = await Cli.Wrap(ResolvePowerShellExe())
                 .WithArguments(
                     new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", tempFile }
                 )

@@ -562,21 +562,40 @@ public sealed partial class ImageListPage : Page
     {
         if (sender is Button button && button.Tag is string id)
         {
+            StackPanel panel = new StackPanel { Spacing = 8 };
+            TextBox nameBox = new TextBox
+            {
+                Header = "VM Name (leave empty for auto-generated)",
+                PlaceholderText = "MyVM",
+                FontSize = 12,
+            };
+            panel.Children.Add(nameBox);
+
+            ContentDialog dialog = new ContentDialog
+            {
+                Title = "Launch VM",
+                Content = panel,
+                PrimaryButtonText = "Launch",
+                CloseButtonText = "Cancel",
+                XamlRoot = this.XamlRoot,
+            };
+
+            ContentDialogResult result = await dialog.ShowAsync();
+            if (result != ContentDialogResult.Primary)
+                return;
+
+            string? vmName = string.IsNullOrWhiteSpace(nameBox.Text) ? null : nameBox.Text.Trim();
+
             try
             {
-                button.IsEnabled = false;
-                button.Content = "Creating...";
-                string response = await App.ApiClient.LaunchVmAsync(id);
-                Shell.Current?.ShowNotification("VM created and started");
+                await App.ApiClient.LaunchVmAsync(id, vmName);
+                Shell.Current?.ShowNotification(
+                    "VM launch started. Check the dashboard for progress."
+                );
             }
             catch (Exception ex)
             {
                 Shell.Current?.ShowError($"Failed to launch VM: {ex.Message}");
-            }
-            finally
-            {
-                button.IsEnabled = true;
-                button.Content = "Launch VM";
             }
         }
     }

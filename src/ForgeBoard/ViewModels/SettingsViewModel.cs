@@ -63,6 +63,9 @@ public partial class SettingsViewModel : ObservableObject
     private string _hyperVSwitch = "Default Switch";
 
     [ObservableProperty]
+    private string _vmManagerAgentUrl = "http://localhost:18275";
+
+    [ObservableProperty]
     private string _currentDataDirectory = string.Empty;
 
     [ObservableProperty]
@@ -165,6 +168,7 @@ public partial class SettingsViewModel : ObservableObject
             WinrmUsername = Settings.WinrmUsername ?? "Administrator";
             WinrmPassword = Settings.WinrmPassword ?? "Admin123!";
             HyperVSwitch = Settings.HyperVSwitch ?? "Default Switch";
+            VmManagerAgentUrl = Settings.VmManagerAgentUrl ?? "http://localhost:18275";
 
             await LoadStorageAsync();
         }
@@ -262,6 +266,9 @@ public partial class SettingsViewModel : ObservableObject
             Settings.HyperVSwitch = string.IsNullOrWhiteSpace(HyperVSwitch)
                 ? "Default Switch"
                 : HyperVSwitch;
+            Settings.VmManagerAgentUrl = string.IsNullOrWhiteSpace(VmManagerAgentUrl)
+                ? "http://localhost:18275"
+                : VmManagerAgentUrl;
             Settings.ModifiedAt = DateTimeOffset.UtcNow;
 
             await _api.SaveSettingsAsync(Settings);

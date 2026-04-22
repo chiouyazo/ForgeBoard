@@ -221,7 +221,18 @@ public sealed class BuildExecutionWorker
                 execution.Status = BuildStatus.Succeeded;
                 notifyStatusChanged(executionId, BuildStatus.Succeeded);
 
-                string? artifactId = RegisterArtifact(executionId, definition, outputDir, addLog);
+                FlattenArtifactDirectory(outputDir);
+                string flattenedPath = Path.Combine(outputDir, Path.GetFileName(finalOutputPath));
+                string resolvedOutputPath = File.Exists(flattenedPath)
+                    ? flattenedPath
+                    : finalOutputPath;
+                string? artifactId = RegisterArtifact(
+                    executionId,
+                    definition,
+                    outputDir,
+                    resolvedOutputPath,
+                    addLog
+                );
                 if (artifactId is not null)
                 {
                     execution.ArtifactId = artifactId;
@@ -303,10 +314,18 @@ public sealed class BuildExecutionWorker
         if (baseImageId.StartsWith(BaseImagePrefixes.BuildChain))
         {
             string chainedDefinitionId = baseImageId[BaseImagePrefixes.BuildChain.Length..];
+            BuildDefinition? chainedDefinition = _db.BuildDefinitions.FindById(chainedDefinitionId);
+            if (chainedDefinition is null)
+            {
+                throw new InvalidOperationException(
+                    $"Chained build definition {chainedDefinitionId} not found"
+                );
+            }
+
             addLog(
                 executionId,
                 Contracts.Models.LogLevel.Info,
-                $"Base image is a build chain to definition {chainedDefinitionId}"
+                $"Base image is a build chain to '{chainedDefinition.Name}' v{chainedDefinition.Version}"
             );
 
             ImageArtifact? existingArtifact = _db
@@ -314,21 +333,48 @@ public sealed class BuildExecutionWorker
                 .OrderByDescending(a => a.CreatedAt)
                 .FirstOrDefault();
 
-            if (existingArtifact is not null && File.Exists(existingArtifact.FilePath))
+            bool canReuse =
+                existingArtifact is not null
+                && File.Exists(existingArtifact.FilePath)
+                && existingArtifact.Version == chainedDefinition.Version;
+
+            if (canReuse)
             {
                 addLog(
                     executionId,
                     Contracts.Models.LogLevel.Info,
-                    $"Using existing artifact from chained build: {existingArtifact.FilePath}"
+                    $"Using existing artifact v{existingArtifact!.Version}: {existingArtifact.FilePath}"
                 );
                 return;
             }
 
-            addLog(
-                executionId,
-                Contracts.Models.LogLevel.Info,
-                "No existing artifact found, triggering chained build..."
-            );
+            if (
+                existingArtifact is not null
+                && existingArtifact.Version != chainedDefinition.Version
+            )
+            {
+                addLog(
+                    executionId,
+                    Contracts.Models.LogLevel.Info,
+                    $"Existing artifact is v{existingArtifact.Version} but definition is v{chainedDefinition.Version}, rebuilding..."
+                );
+            }
+            else if (existingArtifact is not null && !File.Exists(existingArtifact.FilePath))
+            {
+                addLog(
+                    executionId,
+                    Contracts.Models.LogLevel.Warning,
+                    $"Artifact file missing: {existingArtifact.FilePath}, rebuilding..."
+                );
+            }
+            else
+            {
+                addLog(
+                    executionId,
+                    Contracts.Models.LogLevel.Info,
+                    "No existing artifact found, triggering chained build..."
+                );
+            }
 
             BuildExecution? currentExecution = _db.BuildExecutions.FindById(executionId);
             if (currentExecution is not null)
@@ -520,28 +566,18 @@ public sealed class BuildExecutionWorker
         string executionId,
         BuildDefinition definition,
         string outputDir,
+        string outputFilePath,
         Action<string, Contracts.Models.LogLevel, string> addLog
     )
     {
-        if (!Directory.Exists(outputDir))
+        if (!File.Exists(outputFilePath))
         {
-            _logger.LogWarning(
-                "Output directory {OutputDir} does not exist after build",
-                outputDir
-            );
+            _logger.LogWarning("Build output file {Path} does not exist", outputFilePath);
             return null;
         }
 
-        string[] outputFiles = Directory.GetFiles(outputDir, "*", SearchOption.AllDirectories);
-        if (outputFiles.Length == 0)
-        {
-            _logger.LogWarning("No output files found in {OutputDir}", outputDir);
-            return null;
-        }
-
-        string primaryArtifact = outputFiles.OrderByDescending(f => new FileInfo(f).Length).First();
-
-        FileInfo artifactInfo = new FileInfo(primaryArtifact);
+        FileInfo artifactInfo = new FileInfo(outputFilePath);
+        string primaryArtifact = outputFilePath;
 
         ImageArtifact artifact = new ImageArtifact
         {
@@ -552,6 +588,7 @@ public sealed class BuildExecutionWorker
             FilePath = primaryArtifact,
             FileSizeBytes = artifactInfo.Length,
             Format = artifactInfo.Extension.TrimStart('.'),
+            Version = definition.Version,
             CreatedAt = DateTimeOffset.UtcNow,
             Tags = new List<string>(definition.Tags),
         };
@@ -576,16 +613,32 @@ public sealed class BuildExecutionWorker
         if (baseImageId.StartsWith(BaseImagePrefixes.BuildChain))
         {
             string defId = baseImageId[BaseImagePrefixes.BuildChain.Length..];
+            BuildDefinition? chainedDef = _db.BuildDefinitions.FindById(defId);
+            string requiredVersion = chainedDef?.Version ?? string.Empty;
+
             ImageArtifact? artifact = _db
-                .ImageArtifacts.Find(a => a.BuildDefinitionId == defId)
+                .ImageArtifacts.Find(a =>
+                    a.BuildDefinitionId == defId && a.Version == requiredVersion
+                )
                 .OrderByDescending(a => a.CreatedAt)
                 .FirstOrDefault();
+
+            if (artifact is null)
+            {
+                artifact = _db
+                    .ImageArtifacts.Find(a => a.BuildDefinitionId == defId)
+                    .OrderByDescending(a => a.CreatedAt)
+                    .FirstOrDefault();
+            }
+
             if (artifact is not null && File.Exists(artifact.FilePath))
             {
                 return new BaseImage
                 {
                     Id = baseImageId,
-                    Name = $"Chained build output",
+                    Name = chainedDef is not null
+                        ? $"{chainedDef.Name} v{artifact.Version}"
+                        : "Chained build output",
                     LocalCachePath = artifact.FilePath,
                     ImageFormat = artifact.Format,
                     IsCached = true,
@@ -707,6 +760,44 @@ public sealed class BuildExecutionWorker
         }
 
         return runnerConfig;
+    }
+
+    private void FlattenArtifactDirectory(string outputDir)
+    {
+        if (!Directory.Exists(outputDir))
+        {
+            return;
+        }
+
+        string[] vhdxFiles = Directory
+            .GetFiles(outputDir, "*.vhdx", SearchOption.AllDirectories)
+            .Concat(Directory.GetFiles(outputDir, "*.vhd", SearchOption.AllDirectories))
+            .Concat(Directory.GetFiles(outputDir, "*.qcow2", SearchOption.AllDirectories))
+            .ToArray();
+
+        foreach (string file in vhdxFiles)
+        {
+            string destPath = Path.Combine(outputDir, Path.GetFileName(file));
+            if (file != destPath && !File.Exists(destPath))
+            {
+                File.Move(file, destPath);
+                _logger.LogInformation("Moved artifact {Source} to {Dest}", file, destPath);
+            }
+        }
+
+        string[] checksumFiles = Directory.GetFiles(
+            outputDir,
+            "*.sha256",
+            SearchOption.AllDirectories
+        );
+        foreach (string file in checksumFiles)
+        {
+            string destPath = Path.Combine(outputDir, Path.GetFileName(file));
+            if (file != destPath && !File.Exists(destPath))
+            {
+                File.Move(file, destPath);
+            }
+        }
     }
 
     private void CleanupRawExportFiles(

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Threading.Channels;
 using ForgeBoard.Contracts;
 using ForgeBoard.Contracts.Interfaces;
@@ -20,6 +21,8 @@ public sealed class BuildOrchestrator : IBuildOrchestrator, IDisposable
     private readonly Channel<string> _buildQueue;
     private readonly CancellationTokenSource _shutdownCts;
     private readonly Task _workerTask;
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _buildCancellations =
+        new ConcurrentDictionary<string, CancellationTokenSource>();
 
     public event Action<string, BuildLogEntry>? OnBuildLogReceived;
     public event Action<string, BuildStatus>? OnBuildStatusChanged;
@@ -158,6 +161,11 @@ public sealed class BuildOrchestrator : IBuildOrchestrator, IDisposable
         }
 
         await _packerService.CancelBuildAsync(executionId, cancellationToken);
+
+        if (_buildCancellations.TryGetValue(executionId, out CancellationTokenSource? buildCts))
+        {
+            buildCts.Cancel();
+        }
 
         execution.Status = BuildStatus.Cancelled;
         execution.CompletedAt = DateTimeOffset.UtcNow;
@@ -479,6 +487,11 @@ public sealed class BuildOrchestrator : IBuildOrchestrator, IDisposable
         {
             await foreach (string executionId in _buildQueue.Reader.ReadAllAsync(cancellationToken))
             {
+                CancellationTokenSource buildCts = CancellationTokenSource.CreateLinkedTokenSource(
+                    cancellationToken
+                );
+                _buildCancellations[executionId] = buildCts;
+
                 try
                 {
                     await _worker.ExecuteBuildAsync(
@@ -486,12 +499,16 @@ public sealed class BuildOrchestrator : IBuildOrchestrator, IDisposable
                         StartChainedBuildDirectAsync,
                         AddLog,
                         (id, status) => OnBuildStatusChanged?.Invoke(id, status),
-                        cancellationToken
+                        buildCts.Token
                     );
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     throw;
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogInformation("Build {ExecutionId} was cancelled", executionId);
                 }
                 catch (Exception ex)
                 {
@@ -500,6 +517,11 @@ public sealed class BuildOrchestrator : IBuildOrchestrator, IDisposable
                         "Unhandled error processing build execution {ExecutionId}",
                         executionId
                     );
+                }
+                finally
+                {
+                    _buildCancellations.TryRemove(executionId, out _);
+                    buildCts.Dispose();
                 }
             }
         }

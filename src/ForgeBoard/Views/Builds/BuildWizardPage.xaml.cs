@@ -174,34 +174,125 @@ public sealed partial class BuildWizardPage : Page
         }
     }
 
-    private void ToggleStepEdit_Click(object sender, RoutedEventArgs e)
+    private async void ToggleStepEdit_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button button && button.Tag is string id)
         {
-            if (
-                _viewModel.SelectedStepForEdit is not null
-                && _viewModel.SelectedStepForEdit.Id == id
-            )
-            {
-                _viewModel.SelectedStepForEdit = null;
-            }
-            else
-            {
-                BuildStep? step = _viewModel.BuildSteps.FirstOrDefault(s => s.Id == id);
-                _viewModel.SelectedStepForEdit = step;
-            }
+            BuildStep? step = _viewModel.BuildSteps.FirstOrDefault(s => s.Id == id);
+            if (step is null)
+                return;
+
+            _viewModel.SelectedStepForEdit = step;
+            _viewModel.NotifyStepTypeChanged();
+
+            ContentDialog dialog = BuildStepEditDialog();
+            ContentDialogResult result = await dialog.ShowAsync();
+            _viewModel.SelectedStepForEdit = null;
+            RefreshStepList();
         }
     }
 
-    private void StepTypeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private ContentDialog BuildStepEditDialog()
     {
-        _viewModel.NotifyStepTypeChanged();
-    }
+        StackPanel content = new StackPanel { Spacing = 10, MinWidth = 500 };
 
-    private void CloseStepEdit_Click(object sender, RoutedEventArgs e)
-    {
-        _viewModel.SelectedStepForEdit = null;
-        RefreshStepList();
+        TextBox nameBox = new TextBox { Header = "Name", FontSize = 12 };
+        nameBox.SetBinding(
+            TextBox.TextProperty,
+            new Microsoft.UI.Xaml.Data.Binding
+            {
+                Path = new PropertyPath("SelectedStepForEdit.Name"),
+                Mode = Microsoft.UI.Xaml.Data.BindingMode.TwoWay,
+            }
+        );
+        content.Children.Add(nameBox);
+
+        ComboBox typeBox = new ComboBox
+        {
+            Header = "Type",
+            ItemsSource = _viewModel.AvailableStepTypes,
+            FontSize = 12,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        typeBox.SetBinding(
+            ComboBox.SelectedItemProperty,
+            new Microsoft.UI.Xaml.Data.Binding
+            {
+                Path = new PropertyPath("SelectedStepForEdit.StepType"),
+                Mode = Microsoft.UI.Xaml.Data.BindingMode.TwoWay,
+            }
+        );
+        typeBox.SelectionChanged += (s, e) => _viewModel.NotifyStepTypeChanged();
+        content.Children.Add(typeBox);
+
+        TextBox contentBox = new TextBox
+        {
+            Header = "Content",
+            AcceptsReturn = true,
+            MaxHeight = 300,
+            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"),
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        contentBox.SetBinding(
+            TextBox.TextProperty,
+            new Microsoft.UI.Xaml.Data.Binding
+            {
+                Path = new PropertyPath("SelectedStepForEdit.Content"),
+                Mode = Microsoft.UI.Xaml.Data.BindingMode.TwoWay,
+            }
+        );
+        content.Children.Add(contentBox);
+
+        Grid optionsGrid = new Grid();
+        optionsGrid.ColumnDefinitions.Add(
+            new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) }
+        );
+        optionsGrid.ColumnDefinitions.Add(
+            new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }
+        );
+
+        CheckBox packerCheck = new CheckBox
+        {
+            Content = "Run via Packer",
+            Margin = new Thickness(0, 0, 8, 0),
+        };
+        packerCheck.SetBinding(
+            CheckBox.IsCheckedProperty,
+            new Microsoft.UI.Xaml.Data.Binding
+            {
+                Path = new PropertyPath("SelectedStepForEdit.UsePacker"),
+                Mode = Microsoft.UI.Xaml.Data.BindingMode.TwoWay,
+            }
+        );
+        Grid.SetColumn(packerCheck, 0);
+        optionsGrid.Children.Add(packerCheck);
+
+        TextBox timeoutBox = new TextBox { Header = "Timeout (sec)", FontSize = 12 };
+        timeoutBox.SetBinding(
+            TextBox.TextProperty,
+            new Microsoft.UI.Xaml.Data.Binding
+            {
+                Path = new PropertyPath("SelectedStepForEdit.TimeoutSeconds"),
+                Mode = Microsoft.UI.Xaml.Data.BindingMode.TwoWay,
+            }
+        );
+        Grid.SetColumn(timeoutBox, 1);
+        optionsGrid.Children.Add(timeoutBox);
+
+        content.Children.Add(optionsGrid);
+
+        return new ContentDialog
+        {
+            Title = "Edit Step",
+            Content = content,
+            PrimaryButtonText = "Done",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot,
+            DataContext = _viewModel,
+        };
     }
 
     private void RefreshStepList()

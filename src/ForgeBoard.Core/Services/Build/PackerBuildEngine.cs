@@ -59,6 +59,7 @@ public sealed class PackerBuildEngine
         ArgumentNullException.ThrowIfNull(notifyStatusChanged);
 
         string? tempVmName = null;
+        string packerVmName = PackerTemplateGenerator.GenerateVmName(definition);
 
         try
         {
@@ -315,7 +316,6 @@ public sealed class PackerBuildEngine
                 _logger.LogInformation("Cleaned up temporary VM {VmName}", tempVmName);
             }
 
-            string packerVmName = PackerTemplateGenerator.GenerateVmName(definition);
             await PowerShellRunner.RunFireAndForgetAsync(
                 $"$vm = Get-VM -Name '{packerVmName}' -ErrorAction SilentlyContinue; "
                     + "if ($vm) { "

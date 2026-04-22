@@ -66,6 +66,15 @@ public sealed class BuildPhaseExecutor
                 $"Running {phase.Steps.Count} steps in {phase.Mode} mode"
             );
 
+            foreach (BuildStep step in phase.Steps)
+            {
+                addLog(
+                    executionId,
+                    ContractLogLevel.Info,
+                    $"  {step.Order}. [{step.StepType}] {step.Name} (timeout: {step.TimeoutSeconds}s)"
+                );
+            }
+
             BuildEngineResult result;
 
             if (phase.Mode == BuildMode.Packer)

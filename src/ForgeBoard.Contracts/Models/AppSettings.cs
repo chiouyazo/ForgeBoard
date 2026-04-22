@@ -24,5 +24,7 @@ public sealed class AppSettings
 
     public string HyperVSwitch { get; set; } = "Default Switch";
 
+    public string VmManagerAgentUrl { get; set; } = "http://localhost:18275";
+
     public DateTimeOffset ModifiedAt { get; set; } = DateTimeOffset.UtcNow;
 }

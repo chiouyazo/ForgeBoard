@@ -584,11 +584,14 @@ public sealed partial class ImageListPage : Page
             if (result != ContentDialogResult.Primary)
                 return;
 
-            string? vmName = string.IsNullOrWhiteSpace(nameBox.Text) ? null : nameBox.Text.Trim();
+            VmLaunchRequest request = new VmLaunchRequest
+            {
+                VmName = string.IsNullOrWhiteSpace(nameBox.Text) ? null : nameBox.Text.Trim(),
+            };
 
             try
             {
-                await App.ApiClient.LaunchVmAsync(id, vmName);
+                await App.ApiClient.LaunchVmAsync(id, request);
                 Shell.Current?.ShowNotification(
                     "VM launch started. Check the dashboard for progress."
                 );

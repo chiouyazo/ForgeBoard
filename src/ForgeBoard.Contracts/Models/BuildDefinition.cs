@@ -32,6 +32,10 @@ public sealed class BuildDefinition
 
     public List<string> PostProcessors { get; set; } = new List<string>();
 
+    public List<VmNetworkAdapter>? Networks { get; set; }
+
+    public string? NetworkFeedId { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public DateTimeOffset? ModifiedAt { get; set; }

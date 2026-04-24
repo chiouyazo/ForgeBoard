@@ -75,6 +75,10 @@ public sealed partial class Shell : Page
                 NavigateTo(typeof(StepListPage), NavSteps);
                 break;
 
+            case "networks":
+                NavigateTo(typeof(Networks.NetworksPage), NavNetworks);
+                break;
+
             case "settings":
                 NavigateTo(typeof(SettingsPage), NavSettings);
                 break;
@@ -210,6 +214,12 @@ public sealed partial class Shell : Page
     {
         NavigateTo(typeof(StepListPage), NavSteps);
         UpdateBrowserUrl("steps");
+    }
+
+    private void NavNetworks_Click(object sender, RoutedEventArgs e)
+    {
+        NavigateTo(typeof(Networks.NetworksPage), NavNetworks);
+        UpdateBrowserUrl("networks");
     }
 
     private void NavSettings_Click(object sender, RoutedEventArgs e)

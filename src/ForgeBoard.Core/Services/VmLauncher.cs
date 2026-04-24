@@ -101,6 +101,21 @@ public sealed class VmLauncher
                     },
                 };
 
+                if (request?.Networks is { Count: > 0 })
+                {
+                    body["networks"] = request
+                        .Networks.Select(adapter => new Dictionary<string, object?>
+                        {
+                            ["networkId"] = adapter.NetworkId,
+                            ["staticIp"] = adapter.StaticIp,
+                            ["gateway"] = adapter.Gateway,
+                            ["dnsServers"] = adapter.DnsServers,
+                            ["macAddress"] = adapter.MacAddress,
+                            ["vlanId"] = adapter.VlanId,
+                        })
+                        .ToList();
+                }
+
                 string json = JsonSerializer.Serialize(body, JsonOptions);
                 StringContent content = new StringContent(json, Encoding.UTF8, "application/json");
 

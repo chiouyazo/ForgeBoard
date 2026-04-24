@@ -71,6 +71,17 @@
         </Button>
 
         <Button
+          x:Name="NavNetworks"
+          Style="{StaticResource NavButtonStyle}"
+          Click="NavNetworks_Click"
+        >
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <FontIcon Glyph="&#xE968;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+            <TextBlock Text="Networks" />
+          </StackPanel>
+        </Button>
+
+        <Button
           x:Name="NavSettings"
           Style="{StaticResource NavButtonStyle}"
           Click="NavSettings_Click"

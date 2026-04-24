@@ -7,4 +7,6 @@ public sealed class VmLaunchRequest
     public int MemoryMb { get; set; } = 4096;
 
     public int CpuCount { get; set; } = 4;
+
+    public List<VmNetworkAdapter>? Networks { get; set; }
 }

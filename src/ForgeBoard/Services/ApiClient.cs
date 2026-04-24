@@ -308,9 +308,8 @@ public sealed class ApiClient
         }
     }
 
-    public async Task LaunchVmAsync(string artifactId, string? vmName = null)
+    public async Task LaunchVmAsync(string artifactId, VmLaunchRequest request)
     {
-        VmLaunchRequest request = new VmLaunchRequest { VmName = vmName };
         await PostAsync($"api/images/artifacts/{artifactId}/launch-vm", request);
     }
 
@@ -384,6 +383,54 @@ public sealed class ApiClient
     public async Task<List<FeedImage>> BrowseFeedAsync(string feedId)
     {
         return await GetJsonAsync<List<FeedImage>>($"api/feeds/{feedId}/browse");
+    }
+
+    public async Task<List<NetworkDefinition>> GetNetworksAsync(
+        string feedId,
+        string? repository = null
+    )
+    {
+        string url = $"api/networks/{feedId}";
+        if (!string.IsNullOrEmpty(repository))
+        {
+            url += $"?repository={Uri.EscapeDataString(repository)}";
+        }
+        return await GetJsonAsync<List<NetworkDefinition>>(url);
+    }
+
+    public async Task<NetworkDefinition> CreateNetworkAsync(
+        string feedId,
+        string repository,
+        NetworkDefinition network
+    )
+    {
+        NetworkDefinition? result = await PostJsonAsync<NetworkDefinition>(
+            $"api/networks/{feedId}?repository={Uri.EscapeDataString(repository)}",
+            network
+        );
+        return result!;
+    }
+
+    public async Task<NetworkDefinition> UpdateNetworkAsync(
+        string feedId,
+        string repository,
+        string networkId,
+        NetworkDefinition network
+    )
+    {
+        NetworkDefinition? result = await PutJsonAsync<NetworkDefinition>(
+            $"api/networks/{feedId}/{networkId}?repository={Uri.EscapeDataString(repository)}",
+            network
+        );
+        return result!;
+    }
+
+    public async Task DeleteNetworkAsync(string feedId, string repository, string networkId)
+    {
+        HttpResponseMessage response = await _http.DeleteAsync(
+            $"api/networks/{feedId}/{networkId}?repository={Uri.EscapeDataString(repository)}"
+        );
+        await EnsureSuccessAsync(response);
     }
 
     public async Task<BuildStepLibraryEntry> GetStepAsync(string id)

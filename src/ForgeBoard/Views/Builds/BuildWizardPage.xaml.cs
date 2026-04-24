@@ -270,6 +270,10 @@ public sealed partial class BuildWizardPage : Page
         optionsGrid.Children.Add(packerCheck);
 
         TextBox timeoutBox = new TextBox { Header = "Timeout (sec)", FontSize = 12 };
+        timeoutBox.BeforeTextChanging += (s, args) =>
+        {
+            args.Cancel = !string.IsNullOrEmpty(args.NewText) && !args.NewText.All(char.IsDigit);
+        };
         timeoutBox.SetBinding(
             TextBox.TextProperty,
             new Microsoft.UI.Xaml.Data.Binding
@@ -360,6 +364,97 @@ public sealed partial class BuildWizardPage : Page
             for (int i = 0; i < _viewModel.BuildSteps.Count; i++)
             {
                 _viewModel.BuildSteps[i].Order = i;
+            }
+        }
+    }
+
+    private async void LoadBuildNetworks_Click(object sender, RoutedEventArgs e)
+    {
+        await _viewModel.LoadNetworksForBuildCommand.ExecuteAsync(null);
+    }
+
+    private async void AddBuildNetwork_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.AvailableNetworks.Count == 0)
+        {
+            Shell.Current?.ShowWarning("Load networks from a feed first");
+            return;
+        }
+
+        StackPanel panel = new StackPanel { Spacing = 8, MinWidth = 400 };
+
+        ComboBox networkCombo = new ComboBox
+        {
+            Header = "Network",
+            ItemsSource = _viewModel.AvailableNetworks,
+            DisplayMemberPath = "Name",
+            FontSize = 12,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        panel.Children.Add(networkCombo);
+
+        TextBox ipBox = new TextBox
+        {
+            Header = "Static IP (optional, e.g. 192.168.100.50/24)",
+            FontSize = 12,
+            PlaceholderText = "Leave empty for DHCP",
+        };
+        panel.Children.Add(ipBox);
+
+        TextBox gatewayBox = new TextBox { Header = "Gateway (optional)", FontSize = 12 };
+        panel.Children.Add(gatewayBox);
+
+        TextBox dnsBox = new TextBox
+        {
+            Header = "DNS Servers (optional, comma-separated)",
+            FontSize = 12,
+        };
+        panel.Children.Add(dnsBox);
+
+        ContentDialog dialog = new ContentDialog
+        {
+            Title = "Add Network Adapter",
+            Content = panel,
+            PrimaryButtonText = "Add",
+            CloseButtonText = "Cancel",
+            XamlRoot = this.XamlRoot,
+        };
+
+        ContentDialogResult result = await dialog.ShowAsync();
+        if (
+            result == ContentDialogResult.Primary
+            && networkCombo.SelectedItem is NetworkDefinition selected
+        )
+        {
+            VmNetworkAdapter adapter = new VmNetworkAdapter
+            {
+                NetworkId = selected.Id,
+                StaticIp = string.IsNullOrWhiteSpace(ipBox.Text) ? null : ipBox.Text.Trim(),
+                Gateway = string.IsNullOrWhiteSpace(gatewayBox.Text)
+                    ? null
+                    : gatewayBox.Text.Trim(),
+                DnsServers = string.IsNullOrWhiteSpace(dnsBox.Text) ? null : dnsBox.Text.Trim(),
+            };
+            _viewModel.BuildNetworks.Add(adapter);
+        }
+    }
+
+    private void RemoveBuildNetwork_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is string networkId)
+        {
+            VmNetworkAdapter? toRemove = null;
+            foreach (VmNetworkAdapter adapter in _viewModel.BuildNetworks)
+            {
+                if (adapter.NetworkId == networkId)
+                {
+                    toRemove = adapter;
+                    break;
+                }
+            }
+            if (toRemove is not null)
+            {
+                _viewModel.BuildNetworks.Remove(toRemove);
             }
         }
     }

@@ -39,6 +39,21 @@ public partial class BuildWizardViewModel : ObservableObject
     public List<string> AvailableOutputFormats { get; } =
         new List<string> { "qcow2", "vhdx", "vmdk", "raw" };
 
+    public ObservableCollection<Feed> NetworkFeeds { get; } = new ObservableCollection<Feed>();
+    public ObservableCollection<NetworkDefinition> AvailableNetworks { get; } =
+        new ObservableCollection<NetworkDefinition>();
+    public ObservableCollection<VmNetworkAdapter> BuildNetworks { get; } =
+        new ObservableCollection<VmNetworkAdapter>();
+
+    public ObservableCollection<string> NetworkRepositories { get; } =
+        new ObservableCollection<string>();
+
+    [ObservableProperty]
+    private Feed? _networkFeed;
+
+    [ObservableProperty]
+    private string? _networkRepository;
+
     [ObservableProperty]
     private string? _builderWarning;
 
@@ -301,6 +316,7 @@ public partial class BuildWizardViewModel : ObservableObject
             await LoadBaseImagesAsync();
             await LoadStepLibraryAsync();
             await LoadAvailableBuildersAsync();
+            await LoadNetworkFeedsAsync();
         }
         catch (Exception ex)
         {
@@ -414,6 +430,87 @@ public partial class BuildWizardViewModel : ObservableObject
             {
                 AvailableBuilders.Add(fallback);
             }
+        }
+    }
+
+    private async Task LoadNetworkFeedsAsync()
+    {
+        NetworkFeeds.Clear();
+        try
+        {
+            List<Feed> feeds = await _api.GetFeedsAsync();
+            foreach (Feed feed in feeds)
+            {
+                if (feed.SourceType == FeedType.Nexus)
+                {
+                    NetworkFeeds.Add(feed);
+                }
+            }
+        }
+        catch { }
+    }
+
+    partial void OnNetworkFeedChanged(Feed? value)
+    {
+        NetworkRepositories.Clear();
+        NetworkRepository = null;
+        AvailableNetworks.Clear();
+        if (value is not null)
+        {
+            _ = LoadNetworkRepositoriesAsync();
+        }
+    }
+
+    private async Task LoadNetworkRepositoriesAsync()
+    {
+        if (NetworkFeed is null)
+        {
+            return;
+        }
+
+        try
+        {
+            List<string> repos = await _api.GetFeedRepositoriesAsync(NetworkFeed.Id);
+            NetworkRepositories.Clear();
+            foreach (string repo in repos)
+            {
+                NetworkRepositories.Add(repo);
+            }
+            if (NetworkRepositories.Count > 0)
+            {
+                NetworkRepository = NetworkFeed.Repository ?? NetworkRepositories[0];
+            }
+        }
+        catch (Exception ex)
+        {
+            Views.Shell.Current?.ShowError($"Failed to load repositories: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private async Task LoadNetworksForBuildAsync()
+    {
+        if (NetworkFeed is null || string.IsNullOrEmpty(NetworkRepository))
+        {
+            Views.Shell.Current?.ShowWarning("Select a feed and repository first");
+            return;
+        }
+
+        AvailableNetworks.Clear();
+        try
+        {
+            List<NetworkDefinition> networks = await _api.GetNetworksAsync(
+                NetworkFeed.Id,
+                NetworkRepository
+            );
+            foreach (NetworkDefinition network in networks)
+            {
+                AvailableNetworks.Add(network);
+            }
+        }
+        catch (Exception ex)
+        {
+            Views.Shell.Current?.ShowError($"Failed to load networks: {ex.Message}");
         }
     }
 
@@ -709,6 +806,26 @@ public partial class BuildWizardViewModel : ObservableObject
             PostProcessors = string.Join(", ", definition.PostProcessors);
             UnattendPath = definition.UnattendPath ?? string.Empty;
 
+            BuildNetworks.Clear();
+            if (definition.Networks is not null)
+            {
+                foreach (VmNetworkAdapter adapter in definition.Networks)
+                {
+                    BuildNetworks.Add(adapter);
+                }
+            }
+            if (!string.IsNullOrEmpty(definition.NetworkFeedId))
+            {
+                foreach (Feed feed in NetworkFeeds)
+                {
+                    if (feed.Id == definition.NetworkFeedId)
+                    {
+                        NetworkFeed = feed;
+                        break;
+                    }
+                }
+            }
+
             BaseImageDisplayItem? matchingImage = null;
             foreach (BaseImageDisplayItem image in _allBaseImages)
             {
@@ -769,6 +886,8 @@ public partial class BuildWizardViewModel : ObservableObject
             Steps = BuildSteps.ToList(),
             Tags = tagList,
             PostProcessors = postProcessorList,
+            Networks = BuildNetworks.Count > 0 ? BuildNetworks.ToList() : null,
+            NetworkFeedId = NetworkFeed?.Id,
         };
 
         return definition;

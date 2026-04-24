@@ -22,7 +22,10 @@ public partial class App : Application
             );
             if (!string.IsNullOrEmpty(origin))
             {
-                url = origin;
+                Uri originUri = new Uri(origin);
+                bool isLocalDev =
+                    originUri.Host is "localhost" or "127.0.0.1" && originUri.Port != 5050;
+                url = isLocalDev ? $"{originUri.Scheme}://{originUri.Host}:5050" : origin;
             }
         }
         catch { }
